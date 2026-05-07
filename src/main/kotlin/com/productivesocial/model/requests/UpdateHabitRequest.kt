@@ -1,0 +1,21 @@
+package com.productivesocial.com.productivesocial.model.requests
+
+import com.productivesocial.com.productivesocial.constants.HabitType
+import com.productivesocial.com.productivesocial.constants.Recurrency
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class UpdateHabitRequest(
+    val projectId: Long? = null,
+    val name: String? = null,
+    val description: String? = null,
+    val habitType: HabitType? = null,
+    val recurrency: Recurrency? = null,
+    val target: String? = null,
+    val sendReminder: Boolean? = null,
+    val completed: Boolean? = null,
+    val times: List<String>? = null,
+    val reminderTimes: List<String>? = null,
+    val subtasks: List<HabitSubtaskRequest>? = null,
+    val tags: List<String>? = null
+)

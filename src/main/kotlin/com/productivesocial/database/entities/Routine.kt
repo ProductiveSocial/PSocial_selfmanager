@@ -9,9 +9,10 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.datetime.time
 
 object RoutineTable : BaseIdTable("routines") {
+    val userId = reference("user_id", UserTable.id)
+    val projectId = reference("project_id", ProjectTable.id)
     val name = varchar("name", 255)
     val description = text("description").nullable()
-    val projectId = reference("project_id", ProjectTable)
     val recurrency = enumerationByName("recurrency", 50, Recurrency::class)
     val target = varchar("target", 255)
     val sendReminder = bool("send_reminder").default(false)
@@ -49,6 +50,7 @@ class RoutineReminderTimeDAO(id: EntityID<Long>) : BaseEntity(id, RoutineReminde
 class RoutineDAO(id: EntityID<Long>) : BaseEntity(id, RoutineTable) {
     companion object : BaseEntityClass<RoutineDAO>(RoutineTable, RoutineDAO::class.java)
 
+    var userId by RoutineTable.userId
     var name by RoutineTable.name
     var description by RoutineTable.description
     var projectId by RoutineTable.projectId

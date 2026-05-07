@@ -4,31 +4,33 @@ import com.productivesocial.com.productivesocial.constants.Priority
 import com.productivesocial.com.productivesocial.database.base.BaseEntity
 import com.productivesocial.com.productivesocial.database.base.BaseEntityClass
 import com.productivesocial.com.productivesocial.database.base.BaseIdTable
+import com.productivesocial.com.productivesocial.model.responses.TaskResponse
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
-import org.jetbrains.exposed.v1.datetime.date
 import org.jetbrains.exposed.v1.datetime.time
 
 object TaskTable : BaseIdTable("task") {
+    val userId = reference("user_id", UserTable.id)
+    val projectId = reference("project_id", ProjectTable.id)
+    //    val goalId = reference("goal_id", Goal)
     val name = varchar("name", 255)
     val description = text("description").nullable()
-    val projectId = reference("project_id", ProjectTable)
-    //    val goalId = reference("goal_id", Goal)
     val priority = enumerationByName("priority", 20, Priority::class)
     val target = varchar("target", 100).nullable()
     val recurring = bool("recurring").default(false)
     val sendReminder = bool("send_reminder").default(false)
-    val date = date("date").nullable()
+    val date = varchar("date", 25).nullable()
     val completed = bool("completed").default(false)
 }
 
 class TaskDAO(id: EntityID<Long>) : BaseEntity(id, TaskTable) {
     companion object : BaseEntityClass<TaskDAO>(TaskTable, TaskDAO::class.java)
 
-    var name by TaskTable.name
-    var description by TaskTable.description
+    var userId by TaskTable.userId
     var projectId by TaskTable.projectId
     //    var goalId by TaskTable.goalId
+    var name by TaskTable.name
+    var description by TaskTable.description
     var priority by TaskTable.priority
     var tags by TagDAO via TaskTags
     val times by TaskTimesDAO referrersOn TaskTimesTable.taskId
@@ -38,6 +40,22 @@ class TaskDAO(id: EntityID<Long>) : BaseEntity(id, TaskTable) {
     var date by TaskTable.date
     var completed by TaskTable.completed
     val subtasks by SubtaskDAO referrersOn SubtaskTable.taskId
+
+    fun response() = TaskResponse(
+        id = id.value,
+        projectId = projectId.value,
+        name = name,
+        description = description,
+        priority = priority,
+        target = target,
+        recurring = recurring,
+        sendReminder = sendReminder,
+        date = date,
+        completed = completed,
+        tags = tags.map { it.response() },
+        times = times.map { it.taskTime },
+        subtasks = subtasks.map { it.response() }
+    )
 }
 
 object TaskTags : Table("task_tags") {

@@ -10,9 +10,10 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.datetime.time
 
 object HabitTable : BaseIdTable("habits") {
+    val userId = reference("user_id", UserTable.id)
+    val projectId = reference("project_id", ProjectTable.id)
     val name = varchar("name", 255)
     val description = text("description").nullable()
-    val projectId = reference("project_id", ProjectTable)
     val habitType = enumerationByName("habit_type", 50, HabitType::class)
     val recurrency = enumerationByName("recurrency", 50, Recurrency::class)
     val target = varchar("target", 255)
@@ -64,6 +65,7 @@ class HabitSubtaskDAO(id: EntityID<Long>) : BaseEntity(id, HabitSubtasksTable) {
 class HabitDAO(id: EntityID<Long>) : BaseEntity(id, HabitTable) {
     companion object : BaseEntityClass<HabitDAO>(HabitTable, HabitDAO::class.java)
 
+    var userId by HabitTable.userId
     var name by HabitTable.name
     var description by HabitTable.description
     var projectId by HabitTable.projectId

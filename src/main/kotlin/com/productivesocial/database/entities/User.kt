@@ -6,7 +6,7 @@ import com.productivesocial.com.productivesocial.database.base.BaseIdTable
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 
 object UserTable : BaseIdTable("user") {
-    val deviceId = varchar("device_id", length = 255)
+    val deviceId = varchar("device_id", length = 255).uniqueIndex()
 }
 
 class UserDAO(id: EntityID<Long>) : BaseEntity(id, UserTable) {
