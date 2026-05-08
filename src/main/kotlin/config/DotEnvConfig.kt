@@ -13,8 +13,8 @@ object DotEnvConfig {
     // JWT configuration
     val jwtSecret: String get() = DotEnv.get("JWT_SECRET", "zAP5MBA4B4Ijz0MZaS48")
     val jwtIssuer: String get() = DotEnv.get("JWT_ISSUER", "piashcse")
-    val jwtAudience: String get() = DotEnv.get("JWT_AUDIENCE", "ktor-ecommerce")
-    val jwtRealm: String get() = DotEnv.get("JWT_REALM", "ktor-ecommerce")
+    val jwtAudience: String get() = DotEnv.get("JWT_AUDIENCE", "ktor-psocial")
+    val jwtRealm: String get() = DotEnv.get("JWT_REALM", "ktor-psocial")
 
     // CORS configuration
     val allowedOrigins: String get() = DotEnv.get("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080")

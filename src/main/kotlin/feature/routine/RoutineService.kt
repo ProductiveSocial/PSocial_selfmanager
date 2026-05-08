@@ -32,8 +32,7 @@ class RoutineService : RoutineRepository {
             val routines =
                 RoutineDAO.Companion.find { RoutineTable.userId eq userId }.map { it.toResponse() }
             PaginatedResponse(
-                data = routines,
-                metadata = PaginationMetadata(
+                data = routines, metadata = PaginationMetadata(
                     totalItems = routines.size,
                     currentPage = 1,
                     itemsPerPage = routines.size.coerceAtLeast(1),
@@ -65,21 +64,21 @@ class RoutineService : RoutineRepository {
             newRoutine.tags = SizedCollection(routine.tags.map { findOrCreateTag(userId, it) })
 
             routine.times.forEach { timeStamp ->
-                RoutineTimeDAO.Companion.new {
+                RoutineTimeDAO.new {
                     this.routine = newRoutine
                     this.time = Instant.fromEpochMilliseconds(timeStamp)
                 }
             }
 
             routine.reminderTimes.forEach { timeStamp ->
-                RoutineReminderTimeDAO.Companion.new {
+                RoutineReminderTimeDAO.new {
                     this.routine = newRoutine
                     this.time = Instant.fromEpochMilliseconds(timeStamp)
                 }
             }
 
             routine.steps.forEachIndexed { index, stepReq ->
-                RoutineStepDAO.Companion.new {
+                RoutineStepDAO.new {
                     this.routine = newRoutine
                     this.name = stepReq.name
                     this.autoStart = stepReq.autoStart
@@ -93,71 +92,72 @@ class RoutineService : RoutineRepository {
             newRoutine.toResponse()
         }
 
-    override suspend fun updateRoutine(userId: Long, routineId: Long, routine: UpdateRoutineRequest): RoutineResponse =
-        query {
-            val existingRoutine =
-                RoutineDAO.Companion.find { (RoutineTable.userId eq userId) and (RoutineTable.id eq routineId) }
-                    .singleOrNull() ?: throw NotFoundException("Routine not found")
+    override suspend fun updateRoutine(
+        userId: Long, routineId: Long, routine: UpdateRoutineRequest
+    ): RoutineResponse = query {
+        val existingRoutine =
+            RoutineDAO.find { (RoutineTable.userId eq userId) and (RoutineTable.id eq routineId) }
+                .singleOrNull() ?: throw NotFoundException("Routine not found")
 
-            routine.projectId?.let {
-                validateUserAndProject(userId, it)
-                existingRoutine.projectId = EntityID(it, ProjectTable)
-            }
-            routine.name?.let { existingRoutine.name = it }
-            routine.description?.let { existingRoutine.description = it }
-            routine.recurrency?.let { existingRoutine.recurrency = it }
-            routine.target?.let { existingRoutine.target = it }
-            routine.sendReminder?.let { existingRoutine.sendReminder = it }
-            routine.completed?.let { existingRoutine.completed = it }
-
-            routine.tags?.let { tags ->
-                existingRoutine.tags = SizedCollection(tags.map { findOrCreateTag(userId, it) })
-            }
-
-            routine.times?.let { times ->
-                existingRoutine.times.forEach { it.delete() }
-                times.forEach { timeStamp ->
-                    RoutineTimeDAO.Companion.new {
-                        this.routine = existingRoutine
-                        this.time = Instant.fromEpochMilliseconds(timeStamp)
-                    }
-                }
-            }
-
-            routine.reminderTimes?.let { reminderTimes ->
-                existingRoutine.reminderTimes.forEach { it.delete() }
-                reminderTimes.forEach { timeStamp ->
-                    RoutineReminderTimeDAO.Companion.new {
-                        this.routine = existingRoutine
-                        this.time = Instant.fromEpochMilliseconds(timeStamp)
-                    }
-                }
-            }
-
-            routine.steps?.let { steps ->
-                existingRoutine.steps.forEach { step ->
-                    step.completionLogs.forEach { it.delete() }
-                    step.delete()
-                }
-                steps.forEachIndexed { index, stepReq ->
-                    RoutineStepDAO.Companion.new {
-                        this.routine = existingRoutine
-                        this.name = stepReq.name
-                        this.autoStart = stepReq.autoStart
-                        this.duration = stepReq.duration
-                        this.description = stepReq.description
-                        this.completed = stepReq.completed
-                        this.position = index
-                    }
-                }
-            }
-
-            existingRoutine.toResponse()
+        routine.projectId?.let {
+            validateUserAndProject(userId, it)
+            existingRoutine.projectId = EntityID(it, ProjectTable)
         }
+        routine.name?.let { existingRoutine.name = it }
+        routine.description?.let { existingRoutine.description = it }
+        routine.recurrency?.let { existingRoutine.recurrency = it }
+        routine.target?.let { existingRoutine.target = it }
+        routine.sendReminder?.let { existingRoutine.sendReminder = it }
+        routine.completed?.let { existingRoutine.completed = it }
+
+        routine.tags?.let { tags ->
+            existingRoutine.tags = SizedCollection(tags.map { findOrCreateTag(userId, it) })
+        }
+
+        routine.times?.let { times ->
+            existingRoutine.times.forEach { it.delete() }
+            times.forEach { timeStamp ->
+                RoutineTimeDAO.new {
+                    this.routine = existingRoutine
+                    this.time = Instant.fromEpochMilliseconds(timeStamp)
+                }
+            }
+        }
+
+        routine.reminderTimes?.let { reminderTimes ->
+            existingRoutine.reminderTimes.forEach { it.delete() }
+            reminderTimes.forEach { timeStamp ->
+                RoutineReminderTimeDAO.new {
+                    this.routine = existingRoutine
+                    this.time = Instant.fromEpochMilliseconds(timeStamp)
+                }
+            }
+        }
+
+        routine.steps?.let { steps ->
+            existingRoutine.steps.forEach { step ->
+                step.completionLogs.forEach { it.delete() }
+                step.delete()
+            }
+            steps.forEachIndexed { index, stepReq ->
+                RoutineStepDAO.new {
+                    this.routine = existingRoutine
+                    this.name = stepReq.name
+                    this.autoStart = stepReq.autoStart
+                    this.duration = stepReq.duration
+                    this.description = stepReq.description
+                    this.completed = stepReq.completed
+                    this.position = index
+                }
+            }
+        }
+
+        existingRoutine.toResponse()
+    }
 
     override suspend fun deleteRoutine(userId: Long, routineId: Long): RoutineResponse = query {
         val routine =
-            RoutineDAO.Companion.find { (RoutineTable.userId eq userId) and (RoutineTable.id eq routineId) }
+            RoutineDAO.find { (RoutineTable.userId eq userId) and (RoutineTable.id eq routineId) }
                 .singleOrNull() ?: throw NotFoundException("Routine not found")
 
         val response = routine.toResponse()
@@ -166,16 +166,15 @@ class RoutineService : RoutineRepository {
     }
 
     private fun findOrCreateTag(userId: Long, tagName: String): TagDAO =
-        TagDAO.Companion.find { (TagTable.userId eq userId) and (TagTable.name eq tagName) }
-            .singleOrNull()
-            ?: TagDAO.Companion.new {
-                this.userId = EntityID(userId, UserTable)
-                this.name = tagName
-            }
+        TagDAO.find { (TagTable.userId eq userId) and (TagTable.name eq tagName) }
+            .singleOrNull() ?: TagDAO.new {
+            this.userId = EntityID(userId, UserTable)
+            this.name = tagName
+        }
 
     private fun validateUserAndProject(userId: Long, projectId: Long) {
-        UserDAO.Companion.findById(userId) ?: throw NotFoundException("User not found")
-        ProjectDAO.Companion.find { (ProjectTable.id eq projectId) and (ProjectTable.userId eq userId) }
+        UserDAO.findById(userId) ?: throw NotFoundException("User not found")
+        ProjectDAO.find { (ProjectTable.id eq projectId) and (ProjectTable.userId eq userId) }
             .singleOrNull() ?: throw NotFoundException("Project not found")
     }
 }

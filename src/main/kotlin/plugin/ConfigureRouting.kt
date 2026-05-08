@@ -37,7 +37,6 @@ fun Application.configureRoute() {
         get("/") {
             call.respondRedirect("/swagger")
         }.hide()
-        // Internal service-to-service routes — no versioning, no public exposure
         internalRoutes(internalService)
         route("/api") {
             route("v1") {
