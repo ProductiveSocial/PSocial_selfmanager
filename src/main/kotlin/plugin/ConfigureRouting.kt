@@ -2,6 +2,8 @@ package com.productivesocial.plugin
 
 import com.productivesocial.feature.habit.HabitService
 import com.productivesocial.feature.habit.habitRoutes
+import com.productivesocial.feature.internal.InternalService
+import com.productivesocial.feature.internal.internalRoutes
 import com.productivesocial.feature.project.ProjectService
 import com.productivesocial.feature.project.projectRoutes
 import com.productivesocial.feature.routine.RoutineService
@@ -29,11 +31,14 @@ fun Application.configureRoute() {
     val habitService: HabitService by inject()
     val routineService: RoutineService by inject()
     val syncService: SyncService by inject()
+    val internalService: InternalService by inject()
 
     routing {
         get("/") {
             call.respondRedirect("/swagger")
         }.hide()
+        // Internal service-to-service routes — no versioning, no public exposure
+        internalRoutes(internalService)
         route("/api") {
             route("v1") {
                 route("users") { userRoutes(userService) }

@@ -22,6 +22,7 @@ object TaskTable : BaseIdTable("tasks") {
     val sendReminder = bool("send_reminder").default(false)
     val date = timestamp("date").nullable()
     val completed = bool("completed").default(false)
+    val timeSpentMinutes = integer("time_spent_minutes").default(0)
     /** Client-generated UUID used for idempotent sync. Null for entities created via regular API. */
     val syncId = varchar("sync_id", 36).nullable()
 
@@ -51,6 +52,7 @@ class TaskDAO(id: EntityID<Long>) : BaseEntity(id, TaskTable) {
     var sendReminder by TaskTable.sendReminder
     var date by TaskTable.date
     var completed by TaskTable.completed
+    var timeSpentMinutes by TaskTable.timeSpentMinutes
     var syncId by TaskTable.syncId
     val subtasks by SubtaskDAO referrersOn SubtaskTable.taskId
     val completionLogs by TaskCompletionLogDAO referrersOn TaskCompletionLogTable.taskId

@@ -19,6 +19,7 @@ object HabitTable : BaseIdTable("habits") {
     val target = varchar("target", 255)
     val sendReminder = bool("send_reminder").default(false)
     val completed = bool("completed").default(false)
+    val timeSpentMinutes = integer("time_spent_minutes").default(0)
     /** Client-generated UUID used for idempotent sync. Null for entities created via regular API. */
     val syncId = varchar("sync_id", 36).nullable()
 
@@ -41,6 +42,7 @@ object HabitSubtasksTable : BaseIdTable("habit_subtasks") {
     val habitId = reference("habit_id", HabitTable)
     val name = varchar("name", 255)
     val completed = bool("completed").default(false)
+    val timeSpentMinutes = integer("time_spent_minutes").default(0)
 }
 
 object HabitTagsTable : Table("habit_tags_bridge") {
@@ -77,6 +79,7 @@ class HabitSubtaskDAO(id: EntityID<Long>) : BaseEntity(id, HabitSubtasksTable) {
     companion object : BaseEntityClass<HabitSubtaskDAO>(HabitSubtasksTable, HabitSubtaskDAO::class.java)
     var name by HabitSubtasksTable.name
     var completed by HabitSubtasksTable.completed
+    var timeSpentMinutes by HabitSubtasksTable.timeSpentMinutes
     var habit by HabitDAO.Companion referencedOn HabitSubtasksTable.habitId
     val completionLogs by HabitSubtaskCompletionLogDAO referrersOn HabitSubtaskCompletionLogTable.habitSubtaskId
 }
@@ -108,6 +111,7 @@ class HabitDAO(id: EntityID<Long>) : BaseEntity(id, HabitTable) {
     var target by HabitTable.target
     var sendReminder by HabitTable.sendReminder
     var completed by HabitTable.completed
+    var timeSpentMinutes by HabitTable.timeSpentMinutes
     var syncId by HabitTable.syncId
 
     val times by HabitTimeDAO referrersOn HabitTimesTable.habitId

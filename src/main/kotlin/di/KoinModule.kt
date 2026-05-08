@@ -1,6 +1,7 @@
 package com.productivesocial.di
 
 import com.productivesocial.feature.habit.HabitService
+import com.productivesocial.feature.internal.InternalService
 import com.productivesocial.feature.project.ProjectService
 import com.productivesocial.feature.routine.RoutineService
 import com.productivesocial.feature.sync.SyncService
@@ -15,4 +16,5 @@ val serviceModule = module {
     single { HabitService() }
     single { RoutineService() }
     single { SyncService() }
+    single { InternalService() }
 }

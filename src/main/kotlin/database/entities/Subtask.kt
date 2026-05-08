@@ -10,6 +10,7 @@ import org.jetbrains.exposed.v1.datetime.timestamp
 object SubtaskTable : BaseIdTable("subtasks") {
     val name = varchar("name", 255)
     val completed = bool("completed").default(false)
+    val timeSpentMinutes = integer("time_spent_minutes").default(0)
     val taskId = reference("task_id", TaskTable)
 }
 
@@ -24,6 +25,7 @@ class SubtaskDAO(id: EntityID<Long>) : BaseEntity(id, SubtaskTable) {
 
     var name by SubtaskTable.name
     var completed by SubtaskTable.completed
+    var timeSpentMinutes by SubtaskTable.timeSpentMinutes
     var task by TaskDAO.Companion referencedOn SubtaskTable.taskId
 
     val completionLogs by SubtaskCompletionLogDAO referrersOn SubtaskCompletionLogTable.subtaskId
