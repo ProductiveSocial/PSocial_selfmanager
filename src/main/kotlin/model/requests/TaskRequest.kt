@@ -13,9 +13,9 @@ data class TaskRequest(
     val target: String?,
     val recurring: Boolean,
     val sendReminder: Boolean,
-    val date: String?,
+    val date: Long?,
     val completed: Boolean,
-    val times: List<String>,
+    val times: List<Long>,
     val subtasks: List<TaskSubtaskRequest>,
     val tags: List<String>
 )

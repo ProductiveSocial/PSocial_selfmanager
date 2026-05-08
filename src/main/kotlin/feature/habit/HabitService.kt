@@ -24,6 +24,7 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import kotlin.time.Instant
 
 class HabitService : HabitRepository {
     override suspend fun getHabitsByUserId(userId: Long): PaginatedResponse<HabitResponse> = query {
@@ -67,18 +68,18 @@ class HabitService : HabitRepository {
         newHabit.tags = SizedCollection(tagsList)
 
         // Handle Times
-        habit.times.forEach { timeStr ->
+        habit.times.forEach { timeStamp ->
             HabitTimeDAO.Companion.new {
                 this.habit = newHabit
-                this.time = LocalTime.parse(timeStr)
+                this.time = Instant.fromEpochMilliseconds(timeStamp)
             }
         }
 
         // Handle Reminder Times
-        habit.reminderTimes.forEach { timeStr ->
+        habit.reminderTimes.forEach { timeStamp ->
             HabitReminderTimeDAO.Companion.new {
                 this.habit = newHabit
-                this.time = LocalTime.parse(timeStr)
+                this.time = Instant.fromEpochMilliseconds(timeStamp)
             }
         }
 
@@ -122,20 +123,20 @@ class HabitService : HabitRepository {
 
             habit.times?.let { times ->
                 existingHabit.times.forEach { it.delete() }
-                times.forEach { timeStr ->
+                times.forEach { timeStamp ->
                     HabitTimeDAO.Companion.new {
                         this.habit = existingHabit
-                        this.time = LocalTime.parse(timeStr)
+                        this.time = Instant.fromEpochMilliseconds(timeStamp)
                     }
                 }
             }
 
             habit.reminderTimes?.let { reminderTimes ->
                 existingHabit.reminderTimes.forEach { it.delete() }
-                reminderTimes.forEach { timeStr ->
+                reminderTimes.forEach { timeStamp ->
                     HabitReminderTimeDAO.Companion.new {
                         this.habit = existingHabit
-                        this.time = LocalTime.parse(timeStr)
+                        this.time = Instant.fromEpochMilliseconds(timeStamp)
                     }
                 }
             }

@@ -8,6 +8,7 @@ import com.productivesocial.database.base.BaseIdTable
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.datetime.time
+import org.jetbrains.exposed.v1.datetime.timestamp
 
 object HabitTable : BaseIdTable("habits") {
     val userId = reference("user_id", UserTable.id)
@@ -23,12 +24,12 @@ object HabitTable : BaseIdTable("habits") {
 
 object HabitTimesTable : BaseIdTable("habit_times") {
     val habitId = reference("habit_id", HabitTable)
-    val time = time("scheduled_time")
+    val time = timestamp("scheduled_time")
 }
 
 object HabitReminderTimesTable : BaseIdTable("habit_reminder_times") {
     val habitId = reference("habit_id", HabitTable)
-    val time = time("reminder_time")
+    val time = timestamp("reminder_time")
 }
 
 object HabitSubtasksTable : BaseIdTable("habit_subtasks") {

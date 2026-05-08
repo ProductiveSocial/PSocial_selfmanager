@@ -4,6 +4,7 @@ import com.productivesocial.constants.Priority
 import com.productivesocial.database.base.BaseEntity
 import com.productivesocial.database.base.BaseEntityClass
 import com.productivesocial.database.base.BaseIdTable
+import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 
 object ProjectTable : BaseIdTable("projects") {
@@ -13,6 +14,12 @@ object ProjectTable : BaseIdTable("projects") {
     val iconName = varchar("icon_name", 50)
     val colorHex = varchar("color_hex", 7)
     val priority = enumerationByName("priority", 20, Priority::class)
+}
+
+object ProjectTagsTable : Table("project_tags_bridge") {
+    val projectId = reference("project_id", ProjectTable)
+    val tagId = reference("tag_id", TagTable)
+    override val primaryKey = PrimaryKey(projectId, tagId)
 }
 
 class ProjectDAO(id: EntityID<Long>) : BaseEntity(id, ProjectTable) {
@@ -28,4 +35,6 @@ class ProjectDAO(id: EntityID<Long>) : BaseEntity(id, ProjectTable) {
     val habits by HabitDAO referrersOn HabitTable.projectId
     val routines by RoutineDAO.Companion referrersOn RoutineTable.projectId
     val tasks by TaskDAO.Companion referrersOn TaskTable.projectId
+
+    var tags by TagDAO.Companion via ProjectTagsTable
 }

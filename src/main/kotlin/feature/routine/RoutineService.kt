@@ -24,6 +24,7 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import kotlin.time.Instant
 
 class RoutineService : RoutineRepository {
     override suspend fun getRoutinesByUserId(userId: Long): PaginatedResponse<RoutineResponse> =
@@ -67,17 +68,17 @@ class RoutineService : RoutineRepository {
             }
             newRoutine.tags = SizedCollection(tagsList)
 
-            routine.times.forEach { timeStr ->
+            routine.times.forEach { timeStamp ->
                 RoutineTimeDAO.Companion.new {
                     this.routine = newRoutine
-                    this.time = LocalTime.parse(timeStr)
+                    this.time = Instant.fromEpochMilliseconds(timeStamp)
                 }
             }
 
-            routine.reminderTimes.forEach { timeStr ->
+            routine.reminderTimes.forEach { timeStamp ->
                 RoutineReminderTimeDAO.Companion.new {
                     this.routine = newRoutine
-                    this.time = LocalTime.parse(timeStr)
+                    this.time = Instant.fromEpochMilliseconds(timeStamp)
                 }
             }
 
@@ -122,20 +123,20 @@ class RoutineService : RoutineRepository {
 
             routine.times?.let { times ->
                 existingRoutine.times.forEach { it.delete() }
-                times.forEach { timeStr ->
+                times.forEach { timeStamp ->
                     RoutineTimeDAO.Companion.new {
                         this.routine = existingRoutine
-                        this.time = LocalTime.parse(timeStr)
+                        this.time = Instant.fromEpochMilliseconds(timeStamp)
                     }
                 }
             }
 
             routine.reminderTimes?.let { reminderTimes ->
                 existingRoutine.reminderTimes.forEach { it.delete() }
-                reminderTimes.forEach { timeStr ->
+                reminderTimes.forEach { timeStamp ->
                     RoutineReminderTimeDAO.Companion.new {
                         this.routine = existingRoutine
-                        this.time = LocalTime.parse(timeStr)
+                        this.time = Instant.fromEpochMilliseconds(timeStamp)
                     }
                 }
             }

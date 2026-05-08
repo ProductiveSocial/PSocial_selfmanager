@@ -8,8 +8,9 @@ import com.productivesocial.model.responses.TaskResponse
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.datetime.time
+import org.jetbrains.exposed.v1.datetime.timestamp
 
-object TaskTable : BaseIdTable("task") {
+object TaskTable : BaseIdTable("tasks") {
     val userId = reference("user_id", UserTable.id)
     val projectId = reference("project_id", ProjectTable.id)
     //    val goalId = reference("goal_id", Goal)
@@ -19,7 +20,7 @@ object TaskTable : BaseIdTable("task") {
     val target = varchar("target", 100).nullable()
     val recurring = bool("recurring").default(false)
     val sendReminder = bool("send_reminder").default(false)
-    val date = varchar("date", 25).nullable()
+    val date = timestamp("date").nullable()
     val completed = bool("completed").default(false)
 }
 
@@ -51,9 +52,9 @@ class TaskDAO(id: EntityID<Long>) : BaseEntity(id, TaskTable) {
         target = target,
         recurring = recurring,
         sendReminder = sendReminder,
-        date = date,
+        date = date?.toEpochMilliseconds(),
         completed = completed,
-        times = times.map { it.taskTimes.toString() },
+        times = times.map { it.taskTimes.toEpochMilliseconds() },
         subtasks = subtasks.map { it.response() },
         tags = tags.map { it.response() }
     )
@@ -68,7 +69,7 @@ object TaskTags : Table("task_tags") {
 
 object TaskTimesTable : BaseIdTable("task_times") {
     val taskId = reference("task_id", TaskTable)
-    val taskTime = time("task_time")
+    val taskTime = timestamp("task_time")
 }
 
 class TaskTimesDAO(id: EntityID<Long>) : BaseEntity(id, TaskTimesTable) {

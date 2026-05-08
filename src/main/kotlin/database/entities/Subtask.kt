@@ -7,7 +7,7 @@ import com.productivesocial.database.base.BaseIdTable
 import com.productivesocial.model.responses.SubtaskResponse
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 
-object SubtaskTable : BaseIdTable("subtask") {
+object SubtaskTable : BaseIdTable("subtasks") {
     val name = varchar("name", 255)
     val completed = bool("completed").default(false)
     val type = enumerationByName("type", 20, TaskSelectionTypes::class)

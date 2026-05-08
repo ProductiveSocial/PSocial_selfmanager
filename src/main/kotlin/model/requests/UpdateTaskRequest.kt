@@ -12,9 +12,9 @@ data class UpdateTaskRequest(
     val target: String? = null,
     val recurring: Boolean? = null,
     val sendReminder: Boolean? = null,
-    val date: String? = null,
     val completed: Boolean? = null,
-    val times: List<String>? = null,
+    val date: Long? = null,
+    val times: List<Long>? = null,
+    val tags: List<String>? = null,
     val subtasks: List<TaskSubtaskRequest>? = null,
-    val tags: List<String>? = null
 )

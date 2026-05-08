@@ -14,5 +14,6 @@ data class ProjectResponse(
     val priority: Priority,
     val habits: List<HabitResponse> = emptyList(),
     val routines: List<RoutineResponse> = emptyList(),
-    val tasks: List<TaskResponse> = emptyList()
+    val tasks: List<TaskResponse> = emptyList(),
+    val tags: List<TagResponse> = emptyList()
 )

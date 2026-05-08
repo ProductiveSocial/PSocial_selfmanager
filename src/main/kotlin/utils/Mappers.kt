@@ -24,9 +24,9 @@ fun TaskDAO.toResponse(): TaskResponse {
         target = this.target,
         recurring = this.recurring,
         sendReminder = this.sendReminder,
-        date = this.date,
+        date = this.date?.toEpochMilliseconds(),
         completed = this.completed,
-        times = this.times.map { it.taskTimes.toString() },
+        times = this.times.map { it.taskTimes.toEpochMilliseconds() },
         subtasks = this.subtasks.map {
             SubtaskResponse(
                 it.id.value,
@@ -50,7 +50,8 @@ fun ProjectDAO.toResponse(): ProjectResponse {
         priority = this.priority,
         habits = this.habits.map { it.toResponse() },
         routines = this.routines.map { it.toResponse() },
-        tasks = this.tasks.map { it.toResponse() }
+        tasks = this.tasks.map { it.toResponse() },
+        tags = this.tags.map { TagResponse(it.id.value, it.name) }
     )
 }
 
@@ -66,8 +67,8 @@ fun HabitDAO.toResponse(): HabitResponse {
         target = this.target,
         sendReminder = this.sendReminder,
         completed = this.completed,
-        times = this.times.map { it.time.toString() },
-        reminderTimes = this.reminderTimes.map { it.time.toString() },
+        times = this.times.map { it.time.toEpochMilliseconds() },
+        reminderTimes = this.reminderTimes.map { it.time.toEpochMilliseconds() },
         subtasks = this.subtasks.map { HabitSubtaskResponse(it.id.value, it.name, it.completed) },
         tags = this.tags.map { TagResponse(it.id.value, it.name) }
     )
@@ -84,8 +85,8 @@ fun RoutineDAO.toResponse(): RoutineResponse {
         target = this.target,
         sendReminder = this.sendReminder,
         completed = this.completed,
-        times = this.times.map { it.time.toString() },
-        reminderTimes = this.reminderTimes.map { it.time.toString() },
+        times = this.times.map { it.time.toEpochMilliseconds() },
+        reminderTimes = this.reminderTimes.map { it.time.toEpochMilliseconds() },
         steps = this.steps.map {
             RoutineStepResponse(
                 it.id.value,

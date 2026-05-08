@@ -6,13 +6,15 @@ import com.productivesocial.database.base.BaseIdTable
 import com.productivesocial.model.responses.TagResponse
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 
-object TagTable : BaseIdTable("tagsrostgresql") {
+object TagTable : BaseIdTable("tags") {
+    val userId = reference("user_id", UserTable.id)
     val name = varchar("name", 50).uniqueIndex()
 }
 
 class TagDAO(id: EntityID<Long>) : BaseEntity(id, TagTable) {
     companion object : BaseEntityClass<TagDAO>(TagTable, TagDAO::class.java)
 
+    var userId by UserTable.id
     var name by TagTable.name
 
     fun response() = TagResponse(

@@ -14,8 +14,8 @@ data class UpdateHabitRequest(
     val target: String? = null,
     val sendReminder: Boolean? = null,
     val completed: Boolean? = null,
-    val times: List<String>? = null,
-    val reminderTimes: List<String>? = null,
+    val times: List<Long>? = null,
+    val reminderTimes: List<Long>? = null,
     val subtasks: List<HabitSubtaskRequest>? = null,
     val tags: List<String>? = null
 )

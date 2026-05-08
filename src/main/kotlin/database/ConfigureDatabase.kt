@@ -7,6 +7,7 @@ import com.productivesocial.database.entities.TagTable
 import com.productivesocial.database.entities.TaskTable
 import com.productivesocial.database.entities.TaskTags
 import com.productivesocial.database.entities.TaskTimesTable
+import com.productivesocial.database.entities.UserTable
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.flywaydb.core.Flyway
@@ -22,6 +23,7 @@ fun configureDatabase() {
     transaction {
         TransactionManager.current().addLogger(Slf4jSqlDebugLogger)
         SchemaUtils.create(
+            UserTable,
             ProjectTable,
             TaskTable,
             SubtaskTable,

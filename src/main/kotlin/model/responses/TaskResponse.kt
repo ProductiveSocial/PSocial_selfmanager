@@ -2,6 +2,7 @@ package com.productivesocial.model.responses
 
 import com.productivesocial.constants.Priority
 import kotlinx.serialization.Serializable
+import java.sql.Timestamp
 
 @Serializable
 data class TaskResponse(
@@ -11,12 +12,12 @@ data class TaskResponse(
     val name: String,
     val description: String?,
     val priority: Priority,
+    val completed: Boolean,
     val target: String?,
     val recurring: Boolean,
     val sendReminder: Boolean,
-    val date: String?,
-    val completed: Boolean,
-    val times: List<String>,
+    val date: Long?,
+    val times: List<Long>,
+    val tags: List<TagResponse>,
     val subtasks: List<SubtaskResponse>,
-    val tags: List<TagResponse>
 )

@@ -16,8 +16,8 @@ data class HabitResponse(
     val target: String,
     val sendReminder: Boolean,
     val completed: Boolean,
-    val times: List<String>,
-    val reminderTimes: List<String>,
+    val times: List<Long>,
+    val reminderTimes: List<Long>,
     val subtasks: List<HabitSubtaskResponse>,
     val tags: List<TagResponse>
 )

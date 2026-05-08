@@ -9,5 +9,6 @@ data class ProjectRequest(
     val description: String?,
     val iconName: String,
     val colorHex: String,
-    val priority: Priority
+    val priority: Priority,
+    val tags: List<String>
 )

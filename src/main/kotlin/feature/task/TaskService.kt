@@ -25,6 +25,7 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import kotlin.collections.map
+import kotlin.time.Instant
 
 class TaskService : TaskRepository {
     override suspend fun getTasksByUserId(userId: Long): PaginatedResponse<TaskResponse> = query {
@@ -69,7 +70,7 @@ class TaskService : TaskRepository {
             this.target = task.target
             this.recurring = task.recurring
             this.sendReminder = task.sendReminder
-            this.date = task.date
+            this.date = task.date?.let { Instant.fromEpochMilliseconds(it) }
             this.completed = task.completed
         }
 
@@ -79,10 +80,10 @@ class TaskService : TaskRepository {
         }
         newTask.tags = SizedCollection(tagsList)
 
-        task.times.forEach { timeStr ->
+        task.times.forEach { timestamp ->
             TaskTimesDAO.Companion.new {
                 this.taskId = newTask.id
-                this.taskTimes = LocalTime.parse(timeStr)
+                this.taskTimes = Instant.fromEpochMilliseconds(timestamp)
             }
         }
 
@@ -98,7 +99,11 @@ class TaskService : TaskRepository {
         newTask.toResponse()
     }
 
-    override suspend fun updateTask(userId: Long, taskId: Long, task: UpdateTaskRequest): TaskResponse =
+    override suspend fun updateTask(
+        userId: Long,
+        taskId: Long,
+        task: UpdateTaskRequest
+    ): TaskResponse =
         query {
             val existingTask =
                 TaskDAO.Companion.find { (TaskTable.userId eq userId) and (TaskTable.id eq taskId) }
@@ -114,7 +119,7 @@ class TaskService : TaskRepository {
             task.target?.let { existingTask.target = it }
             task.recurring?.let { existingTask.recurring = it }
             task.sendReminder?.let { existingTask.sendReminder = it }
-            task.date?.let { existingTask.date = it }
+            task.date?.let { existingTask.date = Instant.fromEpochMilliseconds(it) }
             task.completed?.let { existingTask.completed = it }
 
             task.tags?.let { tags ->
@@ -127,10 +132,10 @@ class TaskService : TaskRepository {
 
             task.times?.let { times ->
                 existingTask.times.forEach { it.delete() }
-                times.forEach { timeStr ->
+                times.forEach { timestamp ->
                     TaskTimesDAO.Companion.new {
                         this.taskId = existingTask.id
-                        this.taskTimes = LocalTime.parse(timeStr)
+                        this.taskTimes = Instant.fromEpochMilliseconds(timestamp)
                     }
                 }
             }

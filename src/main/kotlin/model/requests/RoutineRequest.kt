@@ -12,8 +12,8 @@ data class RoutineRequest(
     val target: String,
     val sendReminder: Boolean,
     val completed: Boolean,
-    val times: List<String>,
-    val reminderTimes: List<String>,
+    val times: List<Long>,
+    val reminderTimes: List<Long>,
     val steps: List<RoutineStepRequest>,
     val tags: List<String>
 )

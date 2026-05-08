@@ -9,5 +9,6 @@ data class UpdateProjectRequest(
     val description: String? = null,
     val iconName: String? = null,
     val colorHex: String? = null,
-    val priority: Priority? = null
+    val priority: Priority? = null,
+    val tags: List<String>? = null
 )

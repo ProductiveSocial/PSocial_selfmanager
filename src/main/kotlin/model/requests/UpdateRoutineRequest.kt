@@ -12,8 +12,8 @@ data class UpdateRoutineRequest(
     val target: String? = null,
     val sendReminder: Boolean? = null,
     val completed: Boolean? = null,
-    val times: List<String>? = null,
-    val reminderTimes: List<String>? = null,
+    val times: List<Long>? = null,
+    val reminderTimes: List<Long>? = null,
     val steps: List<RoutineStepRequest>? = null,
     val tags: List<String>? = null
 )
