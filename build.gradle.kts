@@ -9,11 +9,12 @@ group = "com.productivesocial"
 version = "0.0.1"
 
 application {
-    mainClass = "io.ktor.server.netty.EngineMain"
+    mainClass = "com.productivesocial.ApplicationKt"
+//    project.setProperty("mainClassName", "com.productivesocial.ApplicationKt")
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(17)
 }
 
 repositories {
