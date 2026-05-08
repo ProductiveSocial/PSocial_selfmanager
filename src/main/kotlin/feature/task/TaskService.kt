@@ -1,6 +1,5 @@
 package com.productivesocial.feature.task
 
-import com.productivesocial.constants.TaskSelectionTypes
 import com.productivesocial.model.PaginatedResponse
 import com.productivesocial.model.PaginationMetadata
 import com.productivesocial.model.requests.TaskRequest
@@ -10,21 +9,23 @@ import com.productivesocial.utils.query
 import com.productivesocial.utils.toResponse
 import com.productivesocial.database.entities.ProjectDAO
 import com.productivesocial.database.entities.ProjectTable
+import com.productivesocial.database.entities.SubtaskCompletionLogTable
 import com.productivesocial.database.entities.SubtaskDAO
+import com.productivesocial.utils.writeTombstone
 import com.productivesocial.database.entities.TagDAO
 import com.productivesocial.database.entities.TagTable
+import com.productivesocial.database.entities.TaskCompletionLogDAO
+import com.productivesocial.database.entities.TaskCompletionLogTable
 import com.productivesocial.database.entities.TaskDAO
 import com.productivesocial.database.entities.TaskTable
 import com.productivesocial.database.entities.TaskTimesDAO
 import com.productivesocial.database.entities.UserDAO
 import com.productivesocial.database.entities.UserTable
 import io.ktor.server.plugins.NotFoundException
-import kotlinx.datetime.LocalTime
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
-import kotlin.collections.map
 import kotlin.time.Instant
 
 class TaskService : TaskRepository {
@@ -52,9 +53,7 @@ class TaskService : TaskRepository {
                 .singleOrNull() ?: throw NotFoundException("Task not found")
 
         val response = task.toResponse()
-        task.subtasks.forEach { it.delete() }
-        task.times.forEach { it.delete() }
-        task.delete()
+        deleteTaskCascade(task, recordTombstone = true)
         response
     }
 
@@ -74,10 +73,7 @@ class TaskService : TaskRepository {
             this.completed = task.completed
         }
 
-        val tagsList = task.tags.map { tagName ->
-            TagDAO.Companion.find { TagTable.name eq tagName }.singleOrNull()
-                ?: TagDAO.Companion.new { name = tagName }
-        }
+        val tagsList = task.tags.map { tagName -> findOrCreateTag(userId, tagName) }
         newTask.tags = SizedCollection(tagsList)
 
         task.times.forEach { timestamp ->
@@ -91,7 +87,6 @@ class TaskService : TaskRepository {
             SubtaskDAO.Companion.new {
                 this.name = subtaskReq.name
                 this.completed = subtaskReq.completed
-                this.type = TaskSelectionTypes.Task
                 this.task = newTask
             }
         }
@@ -123,11 +118,7 @@ class TaskService : TaskRepository {
             task.completed?.let { existingTask.completed = it }
 
             task.tags?.let { tags ->
-                val tagsList = tags.map { tagName ->
-                    TagDAO.Companion.find { TagTable.name eq tagName }.singleOrNull()
-                        ?: TagDAO.Companion.new { name = tagName }
-                }
-                existingTask.tags = SizedCollection(tagsList)
+                existingTask.tags = SizedCollection(tags.map { findOrCreateTag(userId, it) })
             }
 
             task.times?.let { times ->
@@ -141,12 +132,14 @@ class TaskService : TaskRepository {
             }
 
             task.subtasks?.let { subtasks ->
-                existingTask.subtasks.forEach { it.delete() }
+                existingTask.subtasks.forEach { subtask ->
+                    subtask.completionLogs.forEach { it.delete() }
+                    subtask.delete()
+                }
                 subtasks.forEach { subtaskReq ->
                     SubtaskDAO.Companion.new {
                         this.name = subtaskReq.name
                         this.completed = subtaskReq.completed
-                        this.type = TaskSelectionTypes.Task
                         this.task = existingTask
                     }
                 }
@@ -155,9 +148,28 @@ class TaskService : TaskRepository {
             existingTask.toResponse()
         }
 
+    private fun findOrCreateTag(userId: Long, tagName: String): TagDAO =
+        TagDAO.Companion.find { (TagTable.userId eq userId) and (TagTable.name eq tagName) }
+            .singleOrNull()
+            ?: TagDAO.Companion.new {
+                this.userId = EntityID(userId, UserTable)
+                this.name = tagName
+            }
+
     private fun validateUserAndProject(userId: Long, projectId: Long) {
         UserDAO.Companion.findById(userId) ?: throw NotFoundException("User not found")
         ProjectDAO.Companion.find { (ProjectTable.id eq projectId) and (ProjectTable.userId eq userId) }
             .singleOrNull() ?: throw NotFoundException("Project not found")
     }
+}
+
+fun deleteTaskCascade(task: TaskDAO, recordTombstone: Boolean = false) {
+    if (recordTombstone) writeTombstone(task.userId.value, "task", task.id.value)
+    task.subtasks.forEach { subtask ->
+        subtask.completionLogs.forEach { it.delete() }
+        subtask.delete()
+    }
+    task.completionLogs.forEach { it.delete() }
+    task.times.forEach { it.delete() }
+    task.delete()
 }

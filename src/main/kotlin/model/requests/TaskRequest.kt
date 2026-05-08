@@ -1,7 +1,6 @@
 package com.productivesocial.model.requests
 
 import com.productivesocial.constants.Priority
-import com.productivesocial.constants.TaskSelectionTypes
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -23,6 +22,5 @@ data class TaskRequest(
 @Serializable
 data class TaskSubtaskRequest(
     val name: String,
-    val completed: Boolean,
-    val type: TaskSelectionTypes
+    val completed: Boolean
 )

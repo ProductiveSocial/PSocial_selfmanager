@@ -6,7 +6,6 @@ import com.productivesocial.database.base.BaseEntityClass
 import com.productivesocial.database.base.BaseIdTable
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
-import org.jetbrains.exposed.v1.datetime.time
 import org.jetbrains.exposed.v1.datetime.timestamp
 
 object RoutineTable : BaseIdTable("routines") {
@@ -18,6 +17,12 @@ object RoutineTable : BaseIdTable("routines") {
     val target = varchar("target", 255)
     val sendReminder = bool("send_reminder").default(false)
     val completed = bool("completed").default(false)
+    /** Client-generated UUID used for idempotent sync. Null for entities created via regular API. */
+    val syncId = varchar("sync_id", 36).nullable()
+
+    init {
+        uniqueIndex(userId, syncId)
+    }
 }
 
 object RoutineTimesTable : BaseIdTable("routine_times") {
@@ -36,6 +41,12 @@ object RoutineTagsTable : Table("routine_tags_bridge") {
     override val primaryKey = PrimaryKey(routineId, tagId)
 }
 
+object RoutineCompletionLogTable : BaseIdTable("routine_completion_log") {
+    val routineId = reference("routine_id", RoutineTable)
+    val completedAt = timestamp("completed_at")
+    val routineTimeId = reference("routine_time_id", RoutineTimesTable).nullable()
+}
+
 class RoutineTimeDAO(id: EntityID<Long>) : BaseEntity(id, RoutineTimesTable) {
     companion object : BaseEntityClass<RoutineTimeDAO>(RoutineTimesTable, RoutineTimeDAO::class.java)
     var time by RoutineTimesTable.time
@@ -46,6 +57,14 @@ class RoutineReminderTimeDAO(id: EntityID<Long>) : BaseEntity(id, RoutineReminde
     companion object : BaseEntityClass<RoutineReminderTimeDAO>(RoutineReminderTimesTable, RoutineReminderTimeDAO::class.java)
     var time by RoutineReminderTimesTable.time
     var routine by RoutineDAO.Companion referencedOn RoutineReminderTimesTable.routineId
+}
+
+class RoutineCompletionLogDAO(id: EntityID<Long>) : BaseEntity(id, RoutineCompletionLogTable) {
+    companion object : BaseEntityClass<RoutineCompletionLogDAO>(RoutineCompletionLogTable, RoutineCompletionLogDAO::class.java)
+    var routine by RoutineDAO referencedOn RoutineCompletionLogTable.routineId
+    var completedAt by RoutineCompletionLogTable.completedAt
+    var routineTime by RoutineTimeDAO optionalReferencedOn RoutineCompletionLogTable.routineTimeId
+    val stepCompletionLogs by RoutineStepCompletionLogDAO optionalReferrersOn RoutineStepCompletionLogTable.routineCompletionLogId
 }
 
 class RoutineDAO(id: EntityID<Long>) : BaseEntity(id, RoutineTable) {
@@ -59,9 +78,11 @@ class RoutineDAO(id: EntityID<Long>) : BaseEntity(id, RoutineTable) {
     var target by RoutineTable.target
     var sendReminder by RoutineTable.sendReminder
     var completed by RoutineTable.completed
+    var syncId by RoutineTable.syncId
 
     val times by RoutineTimeDAO referrersOn RoutineTimesTable.routineId
     val reminderTimes by RoutineReminderTimeDAO referrersOn RoutineReminderTimesTable.routineId
     val steps by RoutineStepDAO.Companion referrersOn RoutineStepsTable.routineId
+    val completionLogs by RoutineCompletionLogDAO referrersOn RoutineCompletionLogTable.routineId
     var tags by TagDAO.Companion via RoutineTagsTable
 }

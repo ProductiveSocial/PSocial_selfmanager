@@ -3,8 +3,8 @@ package com.productivesocial.model.responses
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class SubtaskResponse(
+data class UserResponse(
     val id: Long,
-    val name: String,
-    val completed: Boolean
+    val deviceId: String,
+    val defaultProjectId: Long
 )

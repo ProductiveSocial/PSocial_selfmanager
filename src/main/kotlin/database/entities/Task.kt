@@ -22,6 +22,17 @@ object TaskTable : BaseIdTable("tasks") {
     val sendReminder = bool("send_reminder").default(false)
     val date = timestamp("date").nullable()
     val completed = bool("completed").default(false)
+    /** Client-generated UUID used for idempotent sync. Null for entities created via regular API. */
+    val syncId = varchar("sync_id", 36).nullable()
+
+    init {
+        uniqueIndex(userId, syncId)
+    }
+}
+
+object TaskCompletionLogTable : BaseIdTable("task_completion_log") {
+    val taskId = reference("task_id", TaskTable)
+    val completedAt = timestamp("completed_at")
 }
 
 class TaskDAO(id: EntityID<Long>) : BaseEntity(id, TaskTable) {
@@ -40,7 +51,9 @@ class TaskDAO(id: EntityID<Long>) : BaseEntity(id, TaskTable) {
     var sendReminder by TaskTable.sendReminder
     var date by TaskTable.date
     var completed by TaskTable.completed
+    var syncId by TaskTable.syncId
     val subtasks by SubtaskDAO referrersOn SubtaskTable.taskId
+    val completionLogs by TaskCompletionLogDAO referrersOn TaskCompletionLogTable.taskId
 
     fun response() = TaskResponse(
         id = id.value,
@@ -58,6 +71,13 @@ class TaskDAO(id: EntityID<Long>) : BaseEntity(id, TaskTable) {
         subtasks = subtasks.map { it.response() },
         tags = tags.map { it.response() }
     )
+}
+
+class TaskCompletionLogDAO(id: EntityID<Long>) : BaseEntity(id, TaskCompletionLogTable) {
+    companion object : BaseEntityClass<TaskCompletionLogDAO>(TaskCompletionLogTable, TaskCompletionLogDAO::class.java)
+    var task by TaskDAO referencedOn TaskCompletionLogTable.taskId
+    var completedAt by TaskCompletionLogTable.completedAt
+    val subtaskCompletionLogs by SubtaskCompletionLogDAO optionalReferrersOn SubtaskCompletionLogTable.taskCompletionLogId
 }
 
 object TaskTags : Table("task_tags") {

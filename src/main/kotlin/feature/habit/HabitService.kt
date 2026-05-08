@@ -18,8 +18,8 @@ import com.productivesocial.database.entities.TagDAO
 import com.productivesocial.database.entities.TagTable
 import com.productivesocial.database.entities.UserDAO
 import com.productivesocial.database.entities.UserTable
+import com.productivesocial.utils.writeTombstone
 import io.ktor.server.plugins.NotFoundException
-import kotlinx.datetime.LocalTime
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
@@ -60,14 +60,8 @@ class HabitService : HabitRepository {
             this.completed = habit.completed
         }
 
-        // Handle Tags
-        val tagsList = habit.tags.map { tagName ->
-            TagDAO.Companion.find { TagTable.name eq tagName }.singleOrNull()
-                ?: TagDAO.Companion.new { name = tagName }
-        }
-        newHabit.tags = SizedCollection(tagsList)
+        newHabit.tags = SizedCollection(habit.tags.map { findOrCreateTag(userId, it) })
 
-        // Handle Times
         habit.times.forEach { timeStamp ->
             HabitTimeDAO.Companion.new {
                 this.habit = newHabit
@@ -75,7 +69,6 @@ class HabitService : HabitRepository {
             }
         }
 
-        // Handle Reminder Times
         habit.reminderTimes.forEach { timeStamp ->
             HabitReminderTimeDAO.Companion.new {
                 this.habit = newHabit
@@ -83,7 +76,6 @@ class HabitService : HabitRepository {
             }
         }
 
-        // Handle Subtasks
         habit.subtasks.forEach { subtaskReq ->
             HabitSubtaskDAO.Companion.new {
                 this.name = subtaskReq.name
@@ -114,11 +106,7 @@ class HabitService : HabitRepository {
             habit.completed?.let { existingHabit.completed = it }
 
             habit.tags?.let { tags ->
-                val tagsList = tags.map { tagName ->
-                    TagDAO.Companion.find { TagTable.name eq tagName }.singleOrNull()
-                        ?: TagDAO.Companion.new { name = tagName }
-                }
-                existingHabit.tags = SizedCollection(tagsList)
+                existingHabit.tags = SizedCollection(tags.map { findOrCreateTag(userId, it) })
             }
 
             habit.times?.let { times ->
@@ -142,7 +130,10 @@ class HabitService : HabitRepository {
             }
 
             habit.subtasks?.let { subtasks ->
-                existingHabit.subtasks.forEach { it.delete() }
+                existingHabit.subtasks.forEach { subtask ->
+                    subtask.completionLogs.forEach { it.delete() }
+                    subtask.delete()
+                }
                 subtasks.forEach { subtaskReq ->
                     HabitSubtaskDAO.Companion.new {
                         this.name = subtaskReq.name
@@ -161,16 +152,33 @@ class HabitService : HabitRepository {
                 .singleOrNull() ?: throw NotFoundException("Habit not found")
 
         val response = habit.toResponse()
-        habit.subtasks.forEach { it.delete() }
-        habit.times.forEach { it.delete() }
-        habit.reminderTimes.forEach { it.delete() }
-        habit.delete()
+        deleteHabitCascade(habit, recordTombstone = true)
         response
     }
+
+    private fun findOrCreateTag(userId: Long, tagName: String): TagDAO =
+        TagDAO.Companion.find { (TagTable.userId eq userId) and (TagTable.name eq tagName) }
+            .singleOrNull()
+            ?: TagDAO.Companion.new {
+                this.userId = EntityID(userId, UserTable)
+                this.name = tagName
+            }
 
     private fun validateUserAndProject(userId: Long, projectId: Long) {
         UserDAO.Companion.findById(userId) ?: throw NotFoundException("User not found")
         ProjectDAO.Companion.find { (ProjectTable.id eq projectId) and (ProjectTable.userId eq userId) }
             .singleOrNull() ?: throw NotFoundException("Project not found")
     }
+}
+
+fun deleteHabitCascade(habit: HabitDAO, recordTombstone: Boolean = false) {
+    if (recordTombstone) writeTombstone(habit.userId.value, "habit", habit.id.value)
+    habit.subtasks.forEach { subtask ->
+        subtask.completionLogs.forEach { it.delete() }
+        subtask.delete()
+    }
+    habit.completionLogs.forEach { it.delete() }
+    habit.times.forEach { it.delete() }
+    habit.reminderTimes.forEach { it.delete() }
+    habit.delete()
 }

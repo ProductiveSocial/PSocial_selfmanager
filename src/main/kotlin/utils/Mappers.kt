@@ -31,8 +31,7 @@ fun TaskDAO.toResponse(): TaskResponse {
             SubtaskResponse(
                 it.id.value,
                 it.name,
-                it.completed,
-                it.type
+                it.completed
             )
         },
         tags = this.tags.map { TagResponse(it.id.value, it.name) }

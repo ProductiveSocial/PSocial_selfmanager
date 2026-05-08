@@ -1,9 +1,27 @@
 package com.productivesocial.database
 
 import com.productivesocial.config.DotEnvConfig
+import com.productivesocial.database.entities.HabitCompletionLogTable
+import com.productivesocial.database.entities.HabitReminderTimesTable
+import com.productivesocial.database.entities.HabitSubtaskCompletionLogTable
+import com.productivesocial.database.entities.HabitSubtasksTable
+import com.productivesocial.database.entities.HabitTable
+import com.productivesocial.database.entities.HabitTagsTable
+import com.productivesocial.database.entities.HabitTimesTable
 import com.productivesocial.database.entities.ProjectTable
+import com.productivesocial.database.entities.ProjectTagsTable
+import com.productivesocial.database.entities.RoutineCompletionLogTable
+import com.productivesocial.database.entities.RoutineReminderTimesTable
+import com.productivesocial.database.entities.RoutineStepCompletionLogTable
+import com.productivesocial.database.entities.RoutineStepsTable
+import com.productivesocial.database.entities.SyncTombstoneTable
+import com.productivesocial.database.entities.RoutineTable
+import com.productivesocial.database.entities.RoutineTagsTable
+import com.productivesocial.database.entities.RoutineTimesTable
+import com.productivesocial.database.entities.SubtaskCompletionLogTable
 import com.productivesocial.database.entities.SubtaskTable
 import com.productivesocial.database.entities.TagTable
+import com.productivesocial.database.entities.TaskCompletionLogTable
 import com.productivesocial.database.entities.TaskTable
 import com.productivesocial.database.entities.TaskTags
 import com.productivesocial.database.entities.TaskTimesTable
@@ -23,13 +41,37 @@ fun configureDatabase() {
     transaction {
         TransactionManager.current().addLogger(Slf4jSqlDebugLogger)
         SchemaUtils.create(
+            // Core
             UserTable,
-            ProjectTable,
-            TaskTable,
-            SubtaskTable,
             TagTable,
+            // Projects
+            ProjectTable,
+            ProjectTagsTable,
+            // Tasks
+            TaskTable,
             TaskTags,
             TaskTimesTable,
+            TaskCompletionLogTable,
+            SubtaskTable,
+            SubtaskCompletionLogTable,
+            // Habits
+            HabitTable,
+            HabitTagsTable,
+            HabitTimesTable,
+            HabitReminderTimesTable,
+            HabitSubtasksTable,
+            HabitCompletionLogTable,
+            HabitSubtaskCompletionLogTable,
+            // Routines
+            RoutineTable,
+            RoutineTagsTable,
+            RoutineTimesTable,
+            RoutineReminderTimesTable,
+            RoutineStepsTable,
+            RoutineCompletionLogTable,
+            RoutineStepCompletionLogTable,
+            // Sync
+            SyncTombstoneTable,
         )
     }
 }

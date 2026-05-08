@@ -7,7 +7,6 @@ import com.productivesocial.database.base.BaseEntityClass
 import com.productivesocial.database.base.BaseIdTable
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
-import org.jetbrains.exposed.v1.datetime.time
 import org.jetbrains.exposed.v1.datetime.timestamp
 
 object HabitTable : BaseIdTable("habits") {
@@ -20,6 +19,12 @@ object HabitTable : BaseIdTable("habits") {
     val target = varchar("target", 255)
     val sendReminder = bool("send_reminder").default(false)
     val completed = bool("completed").default(false)
+    /** Client-generated UUID used for idempotent sync. Null for entities created via regular API. */
+    val syncId = varchar("sync_id", 36).nullable()
+
+    init {
+        uniqueIndex(userId, syncId)
+    }
 }
 
 object HabitTimesTable : BaseIdTable("habit_times") {
@@ -44,6 +49,18 @@ object HabitTagsTable : Table("habit_tags_bridge") {
     override val primaryKey = PrimaryKey(habitId, tagId)
 }
 
+object HabitCompletionLogTable : BaseIdTable("habit_completion_log") {
+    val habitId = reference("habit_id", HabitTable)
+    val completedAt = timestamp("completed_at")
+    val habitTimeId = reference("habit_time_id", HabitTimesTable).nullable()
+}
+
+object HabitSubtaskCompletionLogTable : BaseIdTable("habit_subtask_completion_log") {
+    val habitSubtaskId = reference("habit_subtask_id", HabitSubtasksTable)
+    val completedAt = timestamp("completed_at")
+    val habitCompletionLogId = reference("habit_completion_log_id", HabitCompletionLogTable).nullable()
+}
+
 class HabitTimeDAO(id: EntityID<Long>) : BaseEntity(id, HabitTimesTable) {
     companion object : BaseEntityClass<HabitTimeDAO>(HabitTimesTable, HabitTimeDAO::class.java)
     var time by HabitTimesTable.time
@@ -61,6 +78,22 @@ class HabitSubtaskDAO(id: EntityID<Long>) : BaseEntity(id, HabitSubtasksTable) {
     var name by HabitSubtasksTable.name
     var completed by HabitSubtasksTable.completed
     var habit by HabitDAO.Companion referencedOn HabitSubtasksTable.habitId
+    val completionLogs by HabitSubtaskCompletionLogDAO referrersOn HabitSubtaskCompletionLogTable.habitSubtaskId
+}
+
+class HabitCompletionLogDAO(id: EntityID<Long>) : BaseEntity(id, HabitCompletionLogTable) {
+    companion object : BaseEntityClass<HabitCompletionLogDAO>(HabitCompletionLogTable, HabitCompletionLogDAO::class.java)
+    var habit by HabitDAO referencedOn HabitCompletionLogTable.habitId
+    var completedAt by HabitCompletionLogTable.completedAt
+    var habitTime by HabitTimeDAO optionalReferencedOn HabitCompletionLogTable.habitTimeId
+    val subtaskCompletionLogs by HabitSubtaskCompletionLogDAO optionalReferrersOn HabitSubtaskCompletionLogTable.habitCompletionLogId
+}
+
+class HabitSubtaskCompletionLogDAO(id: EntityID<Long>) : BaseEntity(id, HabitSubtaskCompletionLogTable) {
+    companion object : BaseEntityClass<HabitSubtaskCompletionLogDAO>(HabitSubtaskCompletionLogTable, HabitSubtaskCompletionLogDAO::class.java)
+    var habitSubtask by HabitSubtaskDAO referencedOn HabitSubtaskCompletionLogTable.habitSubtaskId
+    var completedAt by HabitSubtaskCompletionLogTable.completedAt
+    var habitCompletionLog by HabitCompletionLogDAO optionalReferencedOn HabitSubtaskCompletionLogTable.habitCompletionLogId
 }
 
 class HabitDAO(id: EntityID<Long>) : BaseEntity(id, HabitTable) {
@@ -75,10 +108,12 @@ class HabitDAO(id: EntityID<Long>) : BaseEntity(id, HabitTable) {
     var target by HabitTable.target
     var sendReminder by HabitTable.sendReminder
     var completed by HabitTable.completed
+    var syncId by HabitTable.syncId
 
     val times by HabitTimeDAO referrersOn HabitTimesTable.habitId
     val reminderTimes by HabitReminderTimeDAO referrersOn HabitReminderTimesTable.habitId
     val subtasks by HabitSubtaskDAO referrersOn HabitSubtasksTable.habitId
+    val completionLogs by HabitCompletionLogDAO referrersOn HabitCompletionLogTable.habitId
 
     var tags by TagDAO.Companion via HabitTagsTable
 }

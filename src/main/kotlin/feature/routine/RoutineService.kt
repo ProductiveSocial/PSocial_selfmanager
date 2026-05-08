@@ -18,8 +18,8 @@ import com.productivesocial.database.entities.TagDAO
 import com.productivesocial.database.entities.TagTable
 import com.productivesocial.database.entities.UserDAO
 import com.productivesocial.database.entities.UserTable
+import com.productivesocial.utils.writeTombstone
 import io.ktor.server.plugins.NotFoundException
-import kotlinx.datetime.LocalTime
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
@@ -62,11 +62,7 @@ class RoutineService : RoutineRepository {
                 this.completed = routine.completed
             }
 
-            val tagsList = routine.tags.map { tagName ->
-                TagDAO.Companion.find { TagTable.name eq tagName }.singleOrNull()
-                    ?: TagDAO.Companion.new { name = tagName }
-            }
-            newRoutine.tags = SizedCollection(tagsList)
+            newRoutine.tags = SizedCollection(routine.tags.map { findOrCreateTag(userId, it) })
 
             routine.times.forEach { timeStamp ->
                 RoutineTimeDAO.Companion.new {
@@ -82,7 +78,7 @@ class RoutineService : RoutineRepository {
                 }
             }
 
-            routine.steps.forEach { stepReq ->
+            routine.steps.forEachIndexed { index, stepReq ->
                 RoutineStepDAO.Companion.new {
                     this.routine = newRoutine
                     this.name = stepReq.name
@@ -90,6 +86,7 @@ class RoutineService : RoutineRepository {
                     this.duration = stepReq.duration
                     this.description = stepReq.description
                     this.completed = stepReq.completed
+                    this.position = index
                 }
             }
 
@@ -114,11 +111,7 @@ class RoutineService : RoutineRepository {
             routine.completed?.let { existingRoutine.completed = it }
 
             routine.tags?.let { tags ->
-                val tagsList = tags.map { tagName ->
-                    TagDAO.Companion.find { TagTable.name eq tagName }.singleOrNull()
-                        ?: TagDAO.Companion.new { name = tagName }
-                }
-                existingRoutine.tags = SizedCollection(tagsList)
+                existingRoutine.tags = SizedCollection(tags.map { findOrCreateTag(userId, it) })
             }
 
             routine.times?.let { times ->
@@ -142,8 +135,11 @@ class RoutineService : RoutineRepository {
             }
 
             routine.steps?.let { steps ->
-                existingRoutine.steps.forEach { it.delete() }
-                steps.forEach { stepReq ->
+                existingRoutine.steps.forEach { step ->
+                    step.completionLogs.forEach { it.delete() }
+                    step.delete()
+                }
+                steps.forEachIndexed { index, stepReq ->
                     RoutineStepDAO.Companion.new {
                         this.routine = existingRoutine
                         this.name = stepReq.name
@@ -151,6 +147,7 @@ class RoutineService : RoutineRepository {
                         this.duration = stepReq.duration
                         this.description = stepReq.description
                         this.completed = stepReq.completed
+                        this.position = index
                     }
                 }
             }
@@ -164,16 +161,33 @@ class RoutineService : RoutineRepository {
                 .singleOrNull() ?: throw NotFoundException("Routine not found")
 
         val response = routine.toResponse()
-        routine.steps.forEach { it.delete() }
-        routine.times.forEach { it.delete() }
-        routine.reminderTimes.forEach { it.delete() }
-        routine.delete()
+        deleteRoutineCascade(routine, recordTombstone = true)
         response
     }
+
+    private fun findOrCreateTag(userId: Long, tagName: String): TagDAO =
+        TagDAO.Companion.find { (TagTable.userId eq userId) and (TagTable.name eq tagName) }
+            .singleOrNull()
+            ?: TagDAO.Companion.new {
+                this.userId = EntityID(userId, UserTable)
+                this.name = tagName
+            }
 
     private fun validateUserAndProject(userId: Long, projectId: Long) {
         UserDAO.Companion.findById(userId) ?: throw NotFoundException("User not found")
         ProjectDAO.Companion.find { (ProjectTable.id eq projectId) and (ProjectTable.userId eq userId) }
             .singleOrNull() ?: throw NotFoundException("Project not found")
     }
+}
+
+fun deleteRoutineCascade(routine: RoutineDAO, recordTombstone: Boolean = false) {
+    if (recordTombstone) writeTombstone(routine.userId.value, "routine", routine.id.value)
+    routine.steps.forEach { step ->
+        step.completionLogs.forEach { it.delete() }
+        step.delete()
+    }
+    routine.completionLogs.forEach { it.delete() }
+    routine.times.forEach { it.delete() }
+    routine.reminderTimes.forEach { it.delete() }
+    routine.delete()
 }

@@ -8,7 +8,11 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 
 object TagTable : BaseIdTable("tags") {
     val userId = reference("user_id", UserTable.id)
-    val name = varchar("name", 50).uniqueIndex()
+    val name = varchar("name", 50)
+
+    init {
+        uniqueIndex(userId, name)
+    }
 }
 
 class TagDAO(id: EntityID<Long>) : BaseEntity(id, TagTable) {

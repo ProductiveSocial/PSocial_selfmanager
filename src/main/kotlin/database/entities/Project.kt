@@ -14,6 +14,12 @@ object ProjectTable : BaseIdTable("projects") {
     val iconName = varchar("icon_name", 50)
     val colorHex = varchar("color_hex", 7)
     val priority = enumerationByName("priority", 20, Priority::class)
+    /** Client-generated UUID used for idempotent sync. Null for entities created via regular API. */
+    val syncId = varchar("sync_id", 36).nullable()
+
+    init {
+        uniqueIndex(userId, syncId)
+    }
 }
 
 object ProjectTagsTable : Table("project_tags_bridge") {
@@ -31,6 +37,7 @@ class ProjectDAO(id: EntityID<Long>) : BaseEntity(id, ProjectTable) {
     var iconName by ProjectTable.iconName
     var colorHex by ProjectTable.colorHex
     var priority by ProjectTable.priority
+    var syncId by ProjectTable.syncId
 
     val habits by HabitDAO referrersOn HabitTable.projectId
     val routines by RoutineDAO.Companion referrersOn RoutineTable.projectId

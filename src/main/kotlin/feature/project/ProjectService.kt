@@ -1,5 +1,8 @@
 package com.productivesocial.feature.project
 
+import com.productivesocial.feature.habit.deleteHabitCascade
+import com.productivesocial.feature.routine.deleteRoutineCascade
+import com.productivesocial.feature.task.deleteTaskCascade
 import com.productivesocial.model.PaginatedResponse
 import com.productivesocial.model.PaginationMetadata
 import com.productivesocial.model.requests.ProjectRequest
@@ -9,12 +12,16 @@ import com.productivesocial.utils.query
 import com.productivesocial.utils.toResponse
 import com.productivesocial.database.entities.ProjectDAO
 import com.productivesocial.database.entities.ProjectTable
+import com.productivesocial.database.entities.TagDAO
+import com.productivesocial.database.entities.TagTable
 import com.productivesocial.database.entities.UserDAO
 import com.productivesocial.database.entities.UserTable
+import com.productivesocial.utils.writeTombstone
 import io.ktor.server.plugins.NotFoundException
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.SizedCollection
 
 class ProjectService : ProjectRepository {
     override suspend fun getProjectsByUserId(userId: Long): PaginatedResponse<ProjectResponse> =
@@ -41,14 +48,17 @@ class ProjectService : ProjectRepository {
         query {
             UserDAO.Companion.findById(userId) ?: throw NotFoundException("User not found")
 
-            ProjectDAO.Companion.new {
+            val newProject = ProjectDAO.Companion.new {
                 this.userId = EntityID(userId, UserTable)
                 this.name = project.name
                 this.description = project.description
                 this.iconName = project.iconName
                 this.colorHex = project.colorHex
                 this.priority = project.priority
-            }.toResponse()
+            }
+
+            newProject.tags = SizedCollection(project.tags.map { findOrCreateTag(userId, it) })
+            newProject.toResponse()
         }
 
     override suspend fun updateProject(userId: Long, projectId: Long, project: UpdateProjectRequest): ProjectResponse =
@@ -63,7 +73,13 @@ class ProjectService : ProjectRepository {
                 project.iconName?.let { this.iconName = it }
                 project.colorHex?.let { this.colorHex = it }
                 project.priority?.let { this.priority = it }
-            }.toResponse()
+            }
+
+            project.tags?.let { tags ->
+                existingProject.tags = SizedCollection(tags.map { findOrCreateTag(userId, it) })
+            }
+
+            existingProject.toResponse()
         }
 
     override suspend fun deleteProject(userId: Long, projectId: Long): ProjectResponse = query {
@@ -73,27 +89,20 @@ class ProjectService : ProjectRepository {
 
         val response = project.toResponse()
 
-        // Tasks, Habits, and Routines should probably be handled (deleted or unassigned)
-        // For now, assuming CASCADE in DB or manual deletion if needed.
-        project.tasks.forEach { task ->
-            task.subtasks.forEach { it.delete() }
-            task.times.forEach { it.delete() }
-            task.delete()
-        }
-        project.habits.forEach { habit ->
-            habit.subtasks.forEach { it.delete() }
-            habit.times.forEach { it.delete() }
-            habit.reminderTimes.forEach { it.delete() }
-            habit.delete()
-        }
-        project.routines.forEach { routine ->
-            routine.steps.forEach { it.delete() }
-            routine.times.forEach { it.delete() }
-            routine.reminderTimes.forEach { it.delete() }
-            routine.delete()
-        }
-
+        writeTombstone(userId, "project", projectId)
+        project.tasks.forEach { deleteTaskCascade(it, recordTombstone = true) }
+        project.habits.forEach { deleteHabitCascade(it, recordTombstone = true) }
+        project.routines.forEach { deleteRoutineCascade(it, recordTombstone = true) }
         project.delete()
+
         response
     }
+
+    private fun findOrCreateTag(userId: Long, tagName: String): TagDAO =
+        TagDAO.Companion.find { (TagTable.userId eq userId) and (TagTable.name eq tagName) }
+            .singleOrNull()
+            ?: TagDAO.Companion.new {
+                this.userId = EntityID(userId, UserTable)
+                this.name = tagName
+            }
 }
