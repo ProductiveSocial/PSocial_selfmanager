@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: selfmanager
+    env: docker
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        value: jdbc:postgresql://ep-wandering-sky-al630nc5-pooler.c-3.eu-central-1.aws.neon.tech/selfmanager?sslmode=require
+      - key: DB_USER
+        value: neondb_owner
+      - key: DB_PASSWORD
+        value: npg_7pt3xUNSwhbc
+      - key: USER_REGISTRY_DB_HOST
+        value: ep-wandering-sky-al630nc5-pooler.c-3.eu-central-1.aws.neon.tech
+      - key: USER_REGISTRY_DB_PORT
+        value: "5432"
+      - key: USER_REGISTRY_DB_NAME
+        value: selfmanager
+      - key: USER_REGISTRY_DB_USER
+        value: neondb_owner
+      - key: USER_REGISTRY_DB_PASSWORD
+        value: npg_7pt3xUNSwhbc
+      - key: JWT_SECRET
+        value: your-super-secret-jwt-secret-key-change-in-production
+      - key: JWT_ISSUER
+        value: ktor-psocial-app
+      - key: JWT_AUDIENCE
+        value: ktor-psocial
+      - key: JWT_REALM
+        value: ktor-psocial
+      - key: INTERNAL_API_KEY
+        value: psocial-internal-secret
+      - key: HOST
+        value: 0.0.0.0
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: BILLING_SERVICE_URL
+        value: REPLACE_WITH_BILLING_URL
+      - key: TIMER_SERVICE_URL
+        value: REPLACE_WITH_TIMER_URL
