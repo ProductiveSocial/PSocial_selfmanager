@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktor)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.shadow)
     application
 }
 
@@ -16,7 +17,6 @@ application {
 kotlin {
     jvmToolchain(17)
 }
-
 repositories {
     mavenCentral()
     maven { url = uri("https://maven.pkg.jetbrains.space/public/p/ktor/eap") }
@@ -59,6 +59,11 @@ dependencies {
     // Swagger / OpenAPI
     implementation(libs.ktor.swagger.ui)
     implementation(libs.ktor.open.api)
+
+    // HTTP Client (inter-service calls to billing service)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
 
     // Dependency injection (Koin)
     implementation(libs.koin.ktor)

@@ -10,6 +10,7 @@ import com.productivesocial.psocial_selfmanager.database.entities.HabitTagsTable
 import com.productivesocial.psocial_selfmanager.database.entities.HabitTimesTable
 import com.productivesocial.psocial_selfmanager.database.entities.ProjectTable
 import com.productivesocial.psocial_selfmanager.database.entities.ProjectTagsTable
+import com.productivesocial.psocial_selfmanager.database.entities.RefreshTokenTable
 import com.productivesocial.psocial_selfmanager.database.entities.RoutineCompletionLogTable
 import com.productivesocial.psocial_selfmanager.database.entities.RoutineReminderTimesTable
 import com.productivesocial.psocial_selfmanager.database.entities.RoutineStepCompletionLogTable
@@ -38,7 +39,7 @@ fun configureDatabase() {
     initDatabase()
     transaction {
         TransactionManager.current().addLogger(Slf4jSqlDebugLogger)
-        SchemaUtils.create(
+        SchemaUtils.createMissingTablesAndColumns(
             // Core
             UserTable,
             TagTable,
@@ -70,6 +71,8 @@ fun configureDatabase() {
             RoutineStepCompletionLogTable,
             // Sync
             SyncTombstoneTable,
+            // auth
+            RefreshTokenTable
         )
     }
 }
@@ -77,7 +80,7 @@ fun configureDatabase() {
 private fun initDatabase() {
     val config = HikariConfig().apply {
         driverClassName = "org.postgresql.Driver"
-        jdbcUrl = "jdbc:postgresql://${DotEnvConfig.dbHost}:${DotEnvConfig.dbPort}/${DotEnvConfig.dbName}"
+        jdbcUrl = DotEnvConfig.databaseUrl
         username = DotEnvConfig.dbUser
         DotEnvConfig.dbPassword?.let { password = it }
     }

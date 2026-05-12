@@ -2,6 +2,7 @@ package com.productivesocial.psocial_selfmanager.feature.sync
 
 import com.productivesocial.psocial_selfmanager.feature.task.deleteTaskCascade
 import com.productivesocial.psocial_selfmanager.feature.user.UserService
+import com.productivesocial.psocial_selfmanager.model.requests.HabitCompletionSyncBatch
 import com.productivesocial.psocial_selfmanager.model.requests.HabitSyncCreate
 import com.productivesocial.psocial_selfmanager.model.requests.HabitSyncUpdate
 import com.productivesocial.psocial_selfmanager.model.requests.ProjectSyncCreate
@@ -12,12 +13,15 @@ import com.productivesocial.psocial_selfmanager.model.requests.SyncRequest
 import com.productivesocial.psocial_selfmanager.model.requests.TaskSyncCreate
 import com.productivesocial.psocial_selfmanager.model.requests.TaskSyncUpdate
 import com.productivesocial.psocial_selfmanager.model.responses.DeletedEntityIds
+import com.productivesocial.psocial_selfmanager.model.responses.HabitCompletionResponse
 import com.productivesocial.psocial_selfmanager.model.responses.ServerChanges
 import com.productivesocial.psocial_selfmanager.model.responses.SyncError
 import com.productivesocial.psocial_selfmanager.model.responses.SyncIdMappings
 import com.productivesocial.psocial_selfmanager.model.responses.SyncResponse
 import com.productivesocial.psocial_selfmanager.utils.toResponse
 import com.productivesocial.psocial_selfmanager.utils.writeTombstone
+import com.productivesocial.psocial_selfmanager.database.entities.HabitCompletionLogDAO
+import com.productivesocial.psocial_selfmanager.database.entities.HabitCompletionLogTable
 import com.productivesocial.psocial_selfmanager.database.entities.HabitDAO
 import com.productivesocial.psocial_selfmanager.database.entities.HabitReminderTimeDAO
 import com.productivesocial.psocial_selfmanager.database.entities.HabitSubtaskDAO
@@ -50,6 +54,7 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
@@ -57,13 +62,13 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import kotlin.time.toKotlinInstant
 import kotlin.time.Instant as KtInstant
 
 class SyncService : SyncRepository {
 
-    override suspend fun sync(request: SyncRequest): SyncResponse =
+    override suspend fun sync(userId: Long, request: SyncRequest): SyncResponse =
         query {
-            val userId = request.userId
             val syncedAt = Clock.System.now()
             val errors = mutableListOf<SyncError>()
 
@@ -71,6 +76,7 @@ class SyncService : SyncRepository {
             val taskIdMap = mutableMapOf<String, Long>()
             val habitIdMap = mutableMapOf<String, Long>()
             val routineIdMap = mutableMapOf<String, Long>()
+            val habitCompletionIdMap = mutableMapOf<String, Long>()
 
             val projects = request.projects
                 ?: ProjectSyncBatch()
@@ -80,6 +86,8 @@ class SyncService : SyncRepository {
                 ?: HabitSyncBatch()
             val routines = request.routines
                 ?: RoutineSyncBatch()
+            val habitCompletions = request.habitCompletions
+                ?: HabitCompletionSyncBatch()
 
             // ── 1. Deletes ────────────────────────────────────────────────────────
 
@@ -252,8 +260,7 @@ class SyncService : SyncRepository {
                             req.projectId,
                             req.projectClientId,
                             projectIdMap,
-                            defaultProjectId
-                        )
+                        ) { defaultProjectId }
                         taskIdMap[req.clientId] = createTask(userId, pid, req).id.value
                     }
                 }.onFailure {
@@ -294,8 +301,7 @@ class SyncService : SyncRepository {
                             req.projectId,
                             req.projectClientId,
                             projectIdMap,
-                            defaultProjectId
-                        )
+                        ) { defaultProjectId }
                         habitIdMap[req.clientId] = createHabit(userId, pid, req).id.value
                     }
                 }.onFailure {
@@ -336,8 +342,7 @@ class SyncService : SyncRepository {
                             req.projectId,
                             req.projectClientId,
                             projectIdMap,
-                            defaultProjectId
-                        )
+                        ) { defaultProjectId }
                         routineIdMap[req.clientId] = createRoutine(userId, pid, req).id.value
                     }
                 }.onFailure {
@@ -363,12 +368,55 @@ class SyncService : SyncRepository {
                 }
             }
 
-            // ── 10. Build server changes for the client ───────────────────────────
+            // ── 10. Habit completion deletes ──────────────────────────────────────
+
+            habitCompletions.deleted.forEach { completionId ->
+                runCatching {
+                    val log = HabitCompletionLogDAO.Companion.findById(completionId)
+                        ?: return@runCatching
+                    if (log.habit.userId.value != userId) return@runCatching
+                    writeTombstone(userId, "habit_completion", completionId)
+                    log.subtaskCompletionLogs.forEach { it.delete() }
+                    log.delete()
+                }.onFailure {
+                    errors += SyncError("habit_completion", "delete", serverId = completionId, message = it.message ?: "Unknown error")
+                }
+            }
+
+            // ── 11. Habit completion creates ──────────────────────────────────────
+
+            habitCompletions.created.forEach { req ->
+                runCatching {
+                    val existing = HabitCompletionLogDAO.Companion
+                        .find { HabitCompletionLogTable.syncId eq req.clientId }
+                        .singleOrNull()
+                    if (existing != null) {
+                        habitCompletionIdMap[req.clientId] = existing.id.value
+                    } else {
+                        val habitServerId = req.habitId
+                            ?: req.habitClientId?.let { habitIdMap[it] }
+                            ?: return@forEach
+                        val habit = HabitDAO.Companion.findById(habitServerId)
+                            ?.takeIf { it.userId.value == userId } ?: return@forEach
+                        val log = HabitCompletionLogDAO.Companion.new {
+                            this.habit = habit
+                            this.completedAt = KtInstant.fromEpochMilliseconds(req.completedAt)
+                            this.habitTime = req.habitTimeId?.let { HabitTimeDAO.Companion.findById(it) }
+                            this.syncId = req.clientId
+                        }
+                        habitCompletionIdMap[req.clientId] = log.id.value
+                    }
+                }.onFailure {
+                    errors += SyncError("habit_completion", "create", clientId = req.clientId, message = it.message ?: "Unknown error")
+                }
+            }
+
+            // ── 12. Build server changes for the client ───────────────────────────
 
             val serverChanges = buildServerChanges(userId, request.lastSyncedAt)
 
             SyncResponse(
-                idMappings = SyncIdMappings(projectIdMap, taskIdMap, habitIdMap, routineIdMap),
+                idMappings = SyncIdMappings(projectIdMap, taskIdMap, habitIdMap, routineIdMap, habitCompletionIdMap),
                 serverChanges = serverChanges,
                 errors = errors,
                 syncedAt = syncedAt.toEpochMilliseconds()
@@ -445,13 +493,29 @@ class SyncService : SyncRepository {
         val deletedTaskIds = tombstones.filter { it[SyncTombstoneTable.entityType] == "task" }.map { it[SyncTombstoneTable.entityId] }
         val deletedHabitIds = tombstones.filter { it[SyncTombstoneTable.entityType] == "habit" }.map { it[SyncTombstoneTable.entityId] }
         val deletedRoutineIds = tombstones.filter { it[SyncTombstoneTable.entityType] == "routine" }.map { it[SyncTombstoneTable.entityId] }
+        val deletedHabitCompletionIds = tombstones.filter { it[SyncTombstoneTable.entityType] == "habit_completion" }.map { it[SyncTombstoneTable.entityId] }
+
+        // Habit completions changed since lastSyncedAt
+        val userHabitIds = HabitDAO.Companion.find { HabitTable.userId eq userId }.map { it.id }
+        val habitCompletions = if (cutoff == null || userHabitIds.isEmpty()) {
+            if (userHabitIds.isEmpty()) emptyList()
+            else HabitCompletionLogDAO.Companion
+                .find { HabitCompletionLogTable.habitId inList userHabitIds }
+                .map { HabitCompletionResponse(it.id.value, it.habit.id.value, it.completedAt.toEpochMilliseconds(), it.habitTime?.id?.value) }
+        } else {
+            val cutoffInstant = cutoff.toInstant(ZoneOffset.UTC).toKotlinInstant()
+            HabitCompletionLogDAO.Companion
+                .find { (HabitCompletionLogTable.habitId inList userHabitIds) and (HabitCompletionLogTable.completedAt greaterEq cutoffInstant) }
+                .map { HabitCompletionResponse(it.id.value, it.habit.id.value, it.completedAt.toEpochMilliseconds(), it.habitTime?.id?.value) }
+        }
 
         return ServerChanges(
             projects = projects,
             tasks = tasks,
             habits = habits,
             routines = routines,
-            deletedIds = DeletedEntityIds(deletedProjectIds, deletedTaskIds, deletedHabitIds, deletedRoutineIds)
+            habitCompletions = habitCompletions,
+            deletedIds = DeletedEntityIds(deletedProjectIds, deletedTaskIds, deletedHabitIds, deletedRoutineIds, deletedHabitCompletionIds)
         )
     }
 
@@ -461,10 +525,10 @@ class SyncService : SyncRepository {
         projectId: Long?,
         projectClientId: String?,
         projectIdMap: Map<String, Long>,
-        defaultProjectId: Long
+        defaultProjectId: () -> Long
     ): Long = projectId
         ?: projectClientId?.let { projectIdMap[it] }
-        ?: defaultProjectId
+        ?: defaultProjectId()
 
     private fun findOrCreateTag(userId: Long, tagName: String): TagDAO =
         TagDAO.Companion.find { (TagTable.userId eq userId) and (TagTable.name eq tagName) }

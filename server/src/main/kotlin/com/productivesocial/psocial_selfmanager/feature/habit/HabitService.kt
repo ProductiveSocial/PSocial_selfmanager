@@ -2,9 +2,13 @@ package com.productivesocial.psocial_selfmanager.feature.habit
 
 import com.productivesocial.psocial_selfmanager.model.PaginatedResponse
 import com.productivesocial.psocial_selfmanager.model.requests.HabitRequest
+import com.productivesocial.psocial_selfmanager.model.requests.LogHabitCompletionRequest
 import com.productivesocial.psocial_selfmanager.model.requests.UpdateHabitRequest
+import com.productivesocial.psocial_selfmanager.model.responses.HabitCompletionResponse
 import com.productivesocial.psocial_selfmanager.model.responses.HabitResponse
 import com.productivesocial.psocial_selfmanager.utils.toResponse
+import com.productivesocial.psocial_selfmanager.database.entities.HabitCompletionLogDAO
+import com.productivesocial.psocial_selfmanager.database.entities.HabitCompletionLogTable
 import com.productivesocial.psocial_selfmanager.database.entities.HabitDAO
 import com.productivesocial.psocial_selfmanager.database.entities.HabitReminderTimeDAO
 import com.productivesocial.psocial_selfmanager.database.entities.HabitSubtaskDAO
@@ -170,6 +174,56 @@ class HabitService : HabitRepository {
             val response = habit.toResponse()
             deleteHabitCascade(habit, recordTombstone = true)
             response
+        }
+
+    override suspend fun logCompletion(userId: Long, habitId: Long, request: LogHabitCompletionRequest): HabitCompletionResponse =
+        query {
+            val habit = HabitDAO.Companion.find { (HabitTable.userId eq userId) and (HabitTable.id eq habitId) }
+                .singleOrNull() ?: throw NotFoundException("Habit not found")
+
+            val habitTime = request.habitTimeId?.let { HabitTimeDAO.Companion.findById(it) }
+
+            val log = HabitCompletionLogDAO.Companion.new {
+                this.habit = habit
+                this.completedAt = Instant.fromEpochMilliseconds(request.completedAt)
+                this.habitTime = habitTime
+            }
+
+            HabitCompletionResponse(
+                id = log.id.value,
+                habitId = habitId,
+                completedAt = log.completedAt.toEpochMilliseconds(),
+                habitTimeId = log.habitTime?.id?.value
+            )
+        }
+
+    override suspend fun deleteCompletion(userId: Long, habitId: Long, completionId: Long) =
+        query {
+            HabitDAO.Companion.find { (HabitTable.userId eq userId) and (HabitTable.id eq habitId) }
+                .singleOrNull() ?: throw NotFoundException("Habit not found")
+
+            val log = HabitCompletionLogDAO.Companion.find {
+                (HabitCompletionLogTable.id eq completionId) and (HabitCompletionLogTable.habitId eq habitId)
+            }.singleOrNull() ?: throw NotFoundException("Completion not found")
+
+            log.subtaskCompletionLogs.forEach { it.delete() }
+            log.delete()
+        }
+
+    override suspend fun getCompletions(userId: Long, habitId: Long): List<HabitCompletionResponse> =
+        query {
+            HabitDAO.Companion.find { (HabitTable.userId eq userId) and (HabitTable.id eq habitId) }
+                .singleOrNull() ?: throw NotFoundException("Habit not found")
+
+            HabitCompletionLogDAO.Companion.find { HabitCompletionLogTable.habitId eq habitId }
+                .map { log ->
+                    HabitCompletionResponse(
+                        id = log.id.value,
+                        habitId = habitId,
+                        completedAt = log.completedAt.toEpochMilliseconds(),
+                        habitTimeId = log.habitTime?.id?.value
+                    )
+                }
         }
 
     private fun findOrCreateTag(userId: Long, tagName: String): TagDAO =

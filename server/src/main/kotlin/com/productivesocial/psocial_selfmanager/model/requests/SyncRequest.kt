@@ -7,7 +7,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class SyncRequest(
-    val userId: Long,
     /**
      * Epoch millis of the client's last successful sync.
      * The server will return all entities modified after this timestamp so the
@@ -19,7 +18,8 @@ data class SyncRequest(
     val projects: ProjectSyncBatch? = null,
     val tasks: TaskSyncBatch? = null,
     val habits: HabitSyncBatch? = null,
-    val routines: RoutineSyncBatch? = null
+    val routines: RoutineSyncBatch? = null,
+    val habitCompletions: HabitCompletionSyncBatch? = null,
 )
 
 // ── Projects ─────────────────────────────────────────────────────────────────
@@ -183,4 +183,21 @@ data class RoutineSyncUpdate(
     val reminderTimes: List<Long>? = null,
     val steps: List<RoutineStepRequest>? = null,
     val tags: List<String>? = null
+)
+
+// ── Habit Completions ─────────────────────────────────────────────────────────
+
+@Serializable
+data class HabitCompletionSyncBatch(
+    val created: List<HabitCompletionSyncCreate> = emptyList(),
+    val deleted: List<Long> = emptyList()  // server completion IDs to delete
+)
+
+@Serializable
+data class HabitCompletionSyncCreate(
+    val clientId: String,
+    val habitId: Long? = null,
+    val habitClientId: String? = null,
+    val completedAt: Long,
+    val habitTimeId: Long? = null,
 )

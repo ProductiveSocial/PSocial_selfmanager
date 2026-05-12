@@ -19,7 +19,8 @@ data class SyncIdMappings(
     val projects: Map<String, Long> = emptyMap(),
     val tasks: Map<String, Long> = emptyMap(),
     val habits: Map<String, Long> = emptyMap(),
-    val routines: Map<String, Long> = emptyMap()
+    val routines: Map<String, Long> = emptyMap(),
+    val habitCompletions: Map<String, Long> = emptyMap(),
 )
 
 @Serializable
@@ -28,6 +29,7 @@ data class ServerChanges(
     val tasks: List<TaskResponse> = emptyList(),
     val habits: List<HabitResponse> = emptyList(),
     val routines: List<RoutineResponse> = emptyList(),
+    val habitCompletions: List<HabitCompletionResponse> = emptyList(),
     /** Entity IDs deleted on the server since lastSyncedAt. Client should remove these locally. */
     val deletedIds: DeletedEntityIds = DeletedEntityIds()
 )
@@ -37,7 +39,8 @@ data class DeletedEntityIds(
     val projectIds: List<Long> = emptyList(),
     val taskIds: List<Long> = emptyList(),
     val habitIds: List<Long> = emptyList(),
-    val routineIds: List<Long> = emptyList()
+    val routineIds: List<Long> = emptyList(),
+    val habitCompletionIds: List<Long> = emptyList(),
 )
 
 @Serializable

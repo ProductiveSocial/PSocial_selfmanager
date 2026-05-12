@@ -55,6 +55,8 @@ object HabitCompletionLogTable : BaseIdTable("habit_completion_log") {
     val habitId = reference("habit_id", HabitTable)
     val completedAt = timestamp("completed_at")
     val habitTimeId = reference("habit_time_id", HabitTimesTable).nullable()
+    /** Client-generated UUID for idempotent sync creates. */
+    val syncId = varchar("sync_id", 36).nullable()
 }
 
 object HabitSubtaskCompletionLogTable : BaseIdTable("habit_subtask_completion_log") {
@@ -89,6 +91,7 @@ class HabitCompletionLogDAO(id: EntityID<Long>) : BaseEntity(id, HabitCompletion
     var habit by HabitDAO.Companion referencedOn HabitCompletionLogTable.habitId
     var completedAt by HabitCompletionLogTable.completedAt
     var habitTime by HabitTimeDAO optionalReferencedOn HabitCompletionLogTable.habitTimeId
+    var syncId by HabitCompletionLogTable.syncId
     val subtaskCompletionLogs by HabitSubtaskCompletionLogDAO.Companion optionalReferrersOn HabitSubtaskCompletionLogTable.habitCompletionLogId
 }
 

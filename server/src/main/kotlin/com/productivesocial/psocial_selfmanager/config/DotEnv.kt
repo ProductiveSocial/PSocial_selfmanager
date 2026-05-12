@@ -12,11 +12,11 @@ object DotEnv {
         ignoreIfMalformed = true
     }
 
-    fun get(key: String): String? = dotenv[key]
+    fun get(key: String): String? = dotenv[key] ?: System.getenv(key)
 
-    fun get(key: String, defaultValue: String): String = dotenv[key] ?: defaultValue
+    fun get(key: String, defaultValue: String): String = dotenv[key] ?: System.getenv(key) ?: defaultValue
 
-    fun getInt(key: String, defaultValue: Int): Int = dotenv[key]?.toIntOrNull() ?: defaultValue
+    fun getInt(key: String, defaultValue: Int): Int = (dotenv[key] ?: System.getenv(key))?.toIntOrNull() ?: defaultValue
 
 
 

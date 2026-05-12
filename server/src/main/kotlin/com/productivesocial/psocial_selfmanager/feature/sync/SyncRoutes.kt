@@ -1,7 +1,9 @@
 package com.productivesocial.psocial_selfmanager.feature.sync
 
+import com.productivesocial.psocial_selfmanager.model.requests.JwtTokenRequest
 import com.productivesocial.psocial_selfmanager.model.requests.SyncRequest
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.auth.*
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -22,8 +24,10 @@ fun Route.syncRoutes(syncService: SyncService) {
      *   sync failed — successfully processed entities are committed regardless.
      */
     post("/sync") {
+        val userId = call.principal<JwtTokenRequest>()?.userId
+            ?: return@post call.respond(HttpStatusCode.Unauthorized)
         val request = call.receive<SyncRequest>()
-        val response = syncService.sync(request)
+        val response = syncService.sync(userId, request)
         val status = if (response.errors.isEmpty()) HttpStatusCode.OK else HttpStatusCode.MultiStatus
         call.respond(status, response)
     }

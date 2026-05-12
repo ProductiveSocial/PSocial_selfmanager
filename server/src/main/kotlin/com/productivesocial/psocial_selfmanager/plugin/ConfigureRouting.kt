@@ -1,20 +1,23 @@
 package com.productivesocial.psocial_selfmanager.plugin
 
-import com.productivesocial.psocial_selfmanager.feature.habit.habitRoutes
-import com.productivesocial.psocial_selfmanager.feature.internal.internalRoutes
-import com.productivesocial.psocial_selfmanager.feature.project.projectRoutes
-import com.productivesocial.psocial_selfmanager.feature.routine.routineRoutes
-import com.productivesocial.psocial_selfmanager.feature.sync.syncRoutes
-import com.productivesocial.psocial_selfmanager.feature.task.taskRoutes
-import com.productivesocial.psocial_selfmanager.feature.user.userRoutes
+import com.productivesocial.psocial_selfmanager.feature.auth.AuthService
+import com.productivesocial.psocial_selfmanager.feature.auth.authRoutes
 import com.productivesocial.psocial_selfmanager.feature.habit.HabitService
+import com.productivesocial.psocial_selfmanager.feature.habit.habitRoutes
 import com.productivesocial.psocial_selfmanager.feature.internal.InternalService
+import com.productivesocial.psocial_selfmanager.feature.internal.internalRoutes
 import com.productivesocial.psocial_selfmanager.feature.project.ProjectService
+import com.productivesocial.psocial_selfmanager.feature.project.projectRoutes
 import com.productivesocial.psocial_selfmanager.feature.routine.RoutineService
+import com.productivesocial.psocial_selfmanager.feature.routine.routineRoutes
 import com.productivesocial.psocial_selfmanager.feature.sync.SyncService
+import com.productivesocial.psocial_selfmanager.feature.sync.syncRoutes
 import com.productivesocial.psocial_selfmanager.feature.task.TaskService
+import com.productivesocial.psocial_selfmanager.feature.task.taskRoutes
 import com.productivesocial.psocial_selfmanager.feature.user.UserService
+import com.productivesocial.psocial_selfmanager.feature.user.userRoutes
 import io.ktor.server.application.Application
+import io.ktor.server.auth.*
 import io.ktor.server.response.respondRedirect
 import io.ktor.server.routing.get
 import io.ktor.server.routing.openapi.hide
@@ -25,6 +28,7 @@ import org.koin.ktor.ext.inject
 
 @OptIn(ExperimentalKtorApi::class)
 fun Application.configureRoute() {
+    val authService: AuthService by inject()
     val userService: UserService by inject()
     val projectService: ProjectService by inject()
     val taskService: TaskService by inject()
@@ -40,12 +44,15 @@ fun Application.configureRoute() {
         internalRoutes(internalService)
         route("/api") {
             route("v1") {
+                authRoutes(authService)
                 route("users") { userRoutes(userService) }
-                route("projects") { projectRoutes(projectService) }
-                route("tasks") { taskRoutes(taskService) }
-                route("habits") { habitRoutes(habitService) }
-                route("routines") { routineRoutes(routineService) }
-                syncRoutes(syncService)
+                authenticate("auth-jwt") {
+                    route("projects") { projectRoutes(projectService) }
+                    route("tasks") { taskRoutes(taskService) }
+                    route("habits") { habitRoutes(habitService) }
+                    route("routines") { routineRoutes(routineService) }
+                    syncRoutes(syncService)
+                }
             }
         }
     }
