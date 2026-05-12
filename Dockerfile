@@ -1,7 +1,7 @@
 FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 COPY . .
-RUN ./gradlew buildFatJar --no-daemon -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=512m"
+RUN chmod +x ./gradlew && ./gradlew buildFatJar --no-daemon -Dorg.gradle.jvmargs="-Xmx512m -XX:MaxMetaspaceSize=256m"
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app
