@@ -582,6 +582,7 @@ class SyncService : SyncRepository {
             this.name = req.name
             this.description = req.description
             this.priority = req.priority
+            this.urgency = req.urgency
             this.target = req.target
             this.recurring = req.recurring
             this.sendReminder = req.sendReminder
@@ -615,6 +616,7 @@ class SyncService : SyncRepository {
         req.name?.let { task.name = it }
         req.description?.let { task.description = it }
         req.priority?.let { task.priority = it }
+        req.urgency?.let { task.urgency = it }
         req.target?.let { task.target = it }
         req.recurring?.let { task.recurring = it }
         req.sendReminder?.let { task.sendReminder = it }

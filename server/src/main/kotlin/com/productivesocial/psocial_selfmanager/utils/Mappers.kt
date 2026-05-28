@@ -21,6 +21,7 @@ fun TaskDAO.toResponse(): TaskResponse {
         name = this.name,
         description = this.description,
         priority = this.priority,
+        urgency = this.urgency,
         target = this.target,
         recurring = this.recurring,
         sendReminder = this.sendReminder,

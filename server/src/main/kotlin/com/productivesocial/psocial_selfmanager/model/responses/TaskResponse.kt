@@ -11,6 +11,7 @@ data class TaskResponse(
     val name: String,
     val description: String?,
     val priority: Priority,
+    val urgency: String?,
     val completed: Boolean,
     val target: String?,
     val recurring: Boolean,

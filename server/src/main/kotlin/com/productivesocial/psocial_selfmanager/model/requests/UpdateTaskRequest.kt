@@ -9,6 +9,7 @@ data class UpdateTaskRequest(
     val name: String? = null,
     val description: String? = null,
     val priority: Priority? = null,
+    val urgency: String? = null,
     val target: String? = null,
     val recurring: Boolean? = null,
     val sendReminder: Boolean? = null,

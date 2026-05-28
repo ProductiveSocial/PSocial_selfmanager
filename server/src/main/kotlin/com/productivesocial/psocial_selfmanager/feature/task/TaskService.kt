@@ -76,6 +76,7 @@ class TaskService : TaskRepository {
                     this.name = task.name
                     this.description = task.description
                     this.priority = task.priority
+                    this.urgency = task.urgency
                     this.target = task.target
                     this.recurring = task.recurring
                     this.sendReminder = task.sendReminder
@@ -124,6 +125,7 @@ class TaskService : TaskRepository {
             task.name?.let { existingTask.name = it }
             task.description?.let { existingTask.description = it }
             task.priority?.let { existingTask.priority = it }
+            task.urgency?.let { existingTask.urgency = it }
             task.target?.let { existingTask.target = it }
             task.recurring?.let { existingTask.recurring = it }
             task.sendReminder?.let { existingTask.sendReminder = it }

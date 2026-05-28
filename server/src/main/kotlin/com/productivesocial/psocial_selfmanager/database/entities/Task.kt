@@ -21,6 +21,7 @@ object TaskTable : BaseIdTable("tasks") {
     val sendReminder = bool("send_reminder").default(false)
     val date = timestamp("date").nullable()
     val completed = bool("completed").default(false)
+    val urgency = varchar("urgency", 50).nullable()
     val timeSpentMinutes = integer("time_spent_minutes").default(0)
     /** Client-generated UUID used for idempotent sync. Null for entities created via regular API. */
     val syncId = varchar("sync_id", 36).nullable()
@@ -46,6 +47,7 @@ class TaskDAO(id: EntityID<Long>) : BaseEntity(id, TaskTable) {
     var priority by TaskTable.priority
     var tags by TagDAO via TaskTags
     val times by TaskTimesDAO.Companion referrersOn TaskTimesTable.taskId
+    var urgency by TaskTable.urgency
     var target by TaskTable.target
     var recurring by TaskTable.recurring
     var sendReminder by TaskTable.sendReminder
@@ -64,6 +66,7 @@ class TaskDAO(id: EntityID<Long>) : BaseEntity(id, TaskTable) {
             name = name,
             description = description,
             priority = priority,
+            urgency = urgency,
             target = target,
             recurring = recurring,
             sendReminder = sendReminder,
