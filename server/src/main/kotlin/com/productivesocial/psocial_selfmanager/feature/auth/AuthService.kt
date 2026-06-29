@@ -1,5 +1,6 @@
 package com.productivesocial.psocial_selfmanager.feature.auth
 
+import com.productivesocial.psocial_selfmanager.client.BillingClient
 import com.productivesocial.psocial_selfmanager.constants.Messages
 import com.productivesocial.psocial_selfmanager.constants.Priority
 import com.productivesocial.psocial_selfmanager.database.UserRegistry
@@ -16,7 +17,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
-class AuthService : AuthRepository {
+class AuthService(private val billingClient: BillingClient) : AuthRepository {
 
     private val refreshTokenRepo = RefreshTokenRepositoryImpl()
     private val REFRESH_TOKEN_VALIDITY_DAYS = 30L
@@ -44,7 +45,7 @@ class AuthService : AuthRepository {
             }
         }
 
-        // 3. Create a default project for brand-new users
+        // 3. Create a default project and grant welcome credits for brand-new users
         if (isNewUser) {
             query {
                 ProjectDAO.new {
@@ -57,6 +58,7 @@ class AuthService : AuthRepository {
                     this.syncId = null
                 }
             }
+            billingClient.deposit(canonicalId.toString(), 100, "Welcome credits")
         }
 
         return issueTokens(canonicalId, email)

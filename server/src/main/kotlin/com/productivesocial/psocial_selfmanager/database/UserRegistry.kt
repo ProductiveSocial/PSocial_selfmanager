@@ -50,10 +50,9 @@ object UserRegistry {
     }
 
     private fun createUser(conn: Connection, email: String): Long {
-        val sql = "INSERT INTO users (email, device_id, created_at) VALUES (?, ?, NOW()) ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email RETURNING id"
+        val sql = "INSERT INTO users (email, created_at) VALUES (?, NOW()) ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email RETURNING id"
         conn.prepareStatement(sql).use { stmt ->
             stmt.setString(1, email)
-            stmt.setString(2, java.util.UUID.randomUUID().toString())
             val rs = stmt.executeQuery()
             rs.next()
             return rs.getLong("id")

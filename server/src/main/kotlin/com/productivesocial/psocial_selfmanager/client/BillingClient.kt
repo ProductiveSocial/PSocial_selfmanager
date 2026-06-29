@@ -66,6 +66,20 @@ class BillingClient {
         null
     }
 
+    /** Deposit credits for a user. Fire-and-forget — failures are logged, not thrown. */
+    suspend fun deposit(selfmanagerUserId: String, amount: Int, description: String = "Manual deposit"): Boolean = try {
+        val payload = mapOf("amount" to amount, "description" to description)
+        val response = httpClient.post("$baseUrl/api/v1/internal/users/$selfmanagerUserId/deposit") {
+            contentType(ContentType.Application.Json)
+            header("X-Internal-Key", internalKey)
+            setBody(gson.toJson(payload))
+        }
+        response.status.isSuccess()
+    } catch (e: Exception) {
+        println("BillingClient.deposit failed: ${e.message}")
+        false
+    }
+
     /**
      * Check how many credits a user has in the billing service.
      */
